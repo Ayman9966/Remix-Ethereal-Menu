@@ -10,6 +10,16 @@ import { toast } from 'sonner';
 import type { MenuItem, Category } from '@/lib/menu-data';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { Link } from '@tanstack/react-router';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 declare global {
   interface Window {
@@ -84,6 +94,7 @@ function MenuItemsTab() {
   const { items, categories, addItem, updateItem, removeItem, brand } = useMenu();
   const [editing, setEditing] = useState<MenuItem | null>(null);
   const [isNew, setIsNew] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const openNew = () => {
     setEditing({
@@ -181,7 +192,7 @@ function MenuItemsTab() {
                 <Button variant="ghost" size="icon" onClick={() => { setEditing(item); setIsNew(false); }}>
                   <Pencil className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)}>
+                <Button variant="ghost" size="icon" onClick={() => setItemToDelete(item.id)}>
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
@@ -189,6 +200,32 @@ function MenuItemsTab() {
           );
         })}
       </div>
+
+      <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the menu item.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (itemToDelete) {
+                  removeItem(itemToDelete);
+                  setItemToDelete(null);
+                  toast.success("Item deleted successfully");
+                }
+              }}
+            >
+              Yes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
