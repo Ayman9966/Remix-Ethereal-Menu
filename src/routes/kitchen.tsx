@@ -18,13 +18,22 @@ function KitchenPage() {
   const { orders, updateOrder } = useMenu();
 
   const activeOrders = orders.filter(o => o.status !== 'served');
+  const pendingOrders = activeOrders.filter(o => o.status === 'pending');
+  const preparingOrders = activeOrders.filter(o => o.status === 'preparing');
+  const readyOrders = activeOrders.filter(o => o.status === 'ready');
 
   const statusConfig = {
-    pending: { label: 'New Order', color: 'bg-warning text-warning-foreground', icon: Bell },
-    preparing: { label: 'Preparing', color: 'gradient-primary text-primary-foreground', icon: ChefHat },
+    pending: { label: 'New', color: 'bg-warning text-warning-foreground', icon: Bell },
+    preparing: { label: 'Cooking', color: 'gradient-primary text-primary-foreground', icon: ChefHat },
     ready: { label: 'Ready', color: 'bg-success text-success-foreground', icon: CheckCircle },
     served: { label: 'Served', color: 'bg-muted text-muted-foreground', icon: CheckCircle },
   };
+
+  const statusColumns = [
+    { title: 'New', orders: pendingOrders },
+    { title: 'Cooking', orders: preparingOrders },
+    { title: 'Ready', orders: readyOrders },
+  ];
 
   const nextStatus = (status: string) => {
     const flow = ['pending', 'preparing', 'ready', 'served'] as const;
@@ -62,58 +71,60 @@ function KitchenPage() {
             </div>
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {activeOrders.map(order => {
-              const config = statusConfig[order.status];
-              const next = nextStatus(order.status);
-              const Icon = config.icon;
+          <div className="grid gap-6 md:grid-cols-3">
+            {statusColumns.map((col) => (
+              <div key={col.title}>
+                <h3 className="mb-4 text-sm font-semibold text-muted-foreground">{col.title} ({col.orders.length})</h3>
+                <div className="space-y-4">
+                  {col.orders.map(order => {
+                    const config = statusConfig[order.status];
+                    const next = nextStatus(order.status);
+                    const Icon = config.icon;
+                    return (
+                      <div
+                        key={order.id}
+                        className={`rounded-2xl bg-card p-6 shadow-ambient-sm transition-all duration-300 ${
+                          order.status === 'pending' ? 'ring-2 ring-warning/30 animate-pulse-subtle' : ''
+                        }`}
+                      >
+                        <div className="mb-4 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="font-display text-lg font-bold text-primary">#{String(order.orderNumber ?? '?').padStart(3, '0')}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {order.orderType === 'takeaway' ? '📦 Takeaway' : `Table ${order.tableNumber}`}
+                            </span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">{getElapsed(order.createdAt)}</span>
+                        </div>
 
-              return (
-                <div
-                  key={order.id}
-                  className={`rounded-2xl bg-card p-6 shadow-ambient-sm transition-all duration-300 ${
-                    order.status === 'pending' ? 'ring-2 ring-warning/30 animate-pulse-subtle' : ''
-                  }`}
-                >
-                  <div className="mb-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="font-display text-lg font-bold text-primary">#{String(order.orderNumber ?? '?').padStart(3, '0')}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {order.orderType === 'takeaway' ? '📦 Takeaway' : `Table ${order.tableNumber}`}
-                      </span>
-                      <span className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold ${config.color}`}>
-                        <Icon className="h-3.5 w-3.5" />
-                        {config.label}
-                      </span>
-                    </div>
-                    <span className="text-xs text-muted-foreground">{getElapsed(order.createdAt)}</span>
-                  </div>
+                        <div className="space-y-2.5">
+                          {order.items.map((item, i) => (
+                            <div key={i} className="flex items-center justify-between rounded-xl bg-surface-low px-4 py-2.5">
+                              <span className="text-sm text-foreground">{item.menuItem.name}</span>
+                              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card text-xs font-bold text-primary">
+                                {item.quantity}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
 
-                  <div className="space-y-2.5">
-                    {order.items.map((item, i) => (
-                      <div key={i} className="flex items-center justify-between rounded-xl bg-surface-low px-4 py-2.5">
-                        <span className="text-sm text-foreground">{item.menuItem.name}</span>
-                        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card text-xs font-bold text-primary">
-                          {item.quantity}
-                        </span>
+                        {next && (
+                          <Button
+                            className="mt-5 w-full"
+                            variant={order.status === 'pending' ? 'default' : 'success'}
+                            onClick={() => updateOrder({ ...order, status: next })}
+                          >
+                            {next === 'preparing' && 'Start Preparing'}
+                            {next === 'ready' && 'Mark Ready'}
+                            {next === 'served' && 'Mark Served'}
+                          </Button>
+                        )}
                       </div>
-                    ))}
-                  </div>
-
-                  {next && (
-                    <Button
-                      className="mt-5 w-full"
-                      variant={order.status === 'pending' ? 'default' : 'success'}
-                      onClick={() => updateOrder({ ...order, status: next })}
-                    >
-                      {next === 'preparing' && 'Start Preparing'}
-                      {next === 'ready' && 'Mark Ready'}
-                      {next === 'served' && 'Mark Served'}
-                    </Button>
-                  )}
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
       </div>
