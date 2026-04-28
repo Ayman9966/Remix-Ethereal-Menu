@@ -1,6 +1,6 @@
 {
   "name": "Savor",
-  "description": "A premium digital menu SaaS for restaurants featuring terminal, kitchen display, customer menu, and admin control.",
+  "description": "A premium digital menu SaaS for restaurants featuring POS, kitchen display, customer menu, and admin control.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

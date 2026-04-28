@@ -24,8 +24,8 @@ declare global {
 export const Route = createFileRoute('/pos')({
   head: () => ({
     meta: [
-      { title: 'Terminal — Savor' },
-      { name: 'description', content: 'Order management terminal' },
+      { title: 'POS — Savor' },
+      { name: 'description', content: 'Order management POS' },
     ],
   }),
   component: POSPage,
