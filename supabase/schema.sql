@@ -106,7 +106,9 @@ ALTER TABLE public.brand_settings
   ADD COLUMN IF NOT EXISTS board_show_photos BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS board_show_price BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS board_show_description BOOLEAN NOT NULL DEFAULT true,
-  ADD COLUMN IF NOT EXISTS board_show_prep_time BOOLEAN NOT NULL DEFAULT true;
+  ADD COLUMN IF NOT EXISTS board_show_prep_time BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS auto_print_invoice BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS invoice_size TEXT NOT NULL DEFAULT '80mm';
 
 -- User Roles (CRITICAL: roles stored separately — never on profile/users table)
 CREATE TABLE IF NOT EXISTS public.user_roles (
@@ -352,12 +354,14 @@ INSERT INTO public.brand_settings (
   restaurant_name, tagline, accent_color,
   online_ordering_enabled, show_prep_time, menu_scale,
   currency, total_tables, ordering_mode,
-  board_background_color, board_cycle_seconds, board_columns, board_show_photos, board_show_price, board_show_description, board_show_prep_time
+  board_background_color, board_cycle_seconds, board_columns, board_show_photos, board_show_price, board_show_description, board_show_prep_time,
+  auto_print_invoice, invoice_size
 ) SELECT
   'Savor', 'Modern Dining, Redefined', '#426564',
   true, true, 90,
   '$', 20, 'both',
-  '#0a0d13', 15, 3, true, true, true, true
+  '#0a0d13', 15, 3, true, true, true, true,
+  false, '80mm'
 WHERE NOT EXISTS (SELECT 1 FROM public.brand_settings);
 
 -- 8. SEED: Default categories
