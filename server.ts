@@ -50,8 +50,9 @@ async function fetchBootstrapData() {
   return { categories, items, brand, orders };
 }
 
+export const app = express();
+
 async function startServer() {
-  const app = express();
   const PORT = 3000;
   const rootPath = process.cwd();
 
@@ -110,9 +111,15 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  // Only start listening if not being imported (e.g. by Vercel)
+  const isVercel = process.env.VERCEL === '1' || process.env.NOW_REGION;
+  const isStandalone = !isVercel;
+
+  if (isStandalone) {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }
 }
 
 startServer();
