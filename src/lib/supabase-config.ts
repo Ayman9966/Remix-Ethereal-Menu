@@ -1,7 +1,6 @@
 export const SUPABASE_DEFAULTS = {
-  // Keep defaults empty so credentials only come from env vars.
-  // Client should use VITE_SUPABASE_URL + VITE_SUPABASE_PUBLISHABLE_KEY.
-  url: '',
-  publishableKey: '',
+  // CRITICAL: Replace with your actual project URL from Supabase Settings -> API
+  url: 'https://wwywagceysyyadcuqtux.supabase.co', 
+  publishableKey: 'sb_publishable_OqQxU-vOjRqpd_Rv1HskmA_X4r44M_3',
 } as const;
 

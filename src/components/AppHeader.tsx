@@ -13,7 +13,7 @@ const navItems = [
 
 export function AppHeader() {
   const location = useLocation();
-  const { brand, searchQuery, setSearchQuery } = useMenu();
+  const { brand, searchQuery, setSearchQuery, posViewMode, setPosViewMode } = useMenu();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const visibleNavItems = navItems.filter((item) => {
@@ -53,6 +53,36 @@ export function AppHeader() {
         <nav className="hidden items-center gap-1 md:flex">
           {visibleNavItems.map(({ to, label, icon: Icon }) => {
             const active = location.pathname === to;
+            
+            if (to === '/pos' && location.pathname === '/pos') {
+              return (
+                <div key={to} className="flex bg-surface-low rounded-lg p-1">
+                  <button
+                    onClick={() => setPosViewMode('pos')}
+                    className={`flex items-center gap-2 rounded-md px-3 py-1 text-sm font-medium transition-all ${
+                      posViewMode === 'pos'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    POS
+                  </button>
+                  <button
+                    onClick={() => setPosViewMode('history')}
+                    className={`flex items-center gap-2 rounded-md px-3 py-1 text-sm font-medium transition-all ${
+                      posViewMode === 'history'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <ChefHat className="h-4 w-4" />
+                    History
+                  </button>
+                </div>
+              );
+            }
+
             return (
               <Link
                 key={to}

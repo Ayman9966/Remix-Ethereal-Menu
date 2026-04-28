@@ -244,7 +244,17 @@ export async function fetchBootstrapData(): Promise<{
 
   const [categories, items] = await Promise.all([fetchCategories(), fetchMenuItems()]);
 
-  // Ensure we always have at least seeded menu items in Supabase
+  // Ensure we always have at least seeded categories and items in Supabase
+  if (categories.length === 0 && items.length === 0) {
+    const seededCats = defaultCategories.map(c => ({
+      name: c.name,
+      icon: c.icon,
+      sort_order: c.order
+    }));
+    await supabase.from('categories').insert(seededCats);
+    return await fetchBootstrapData();
+  }
+
   if (categories.length > 0 && items.length === 0) {
     const byName = new Map(categories.map((c) => [c.name.toLowerCase(), c.id]));
     const seeded = defaultMenuItems

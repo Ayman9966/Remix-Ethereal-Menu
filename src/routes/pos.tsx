@@ -3,10 +3,17 @@ import { AppHeader } from '@/components/AppHeader';
 import { useMenu } from '@/hooks/use-menu-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Minus, ShoppingCart, X, Send, Package, Bell, Check } from 'lucide-react';
+import { X, Send, Package, Bell, Check, Printer, ShoppingCart, Plus, Minus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { MenuItem, OrderItem } from '@/lib/menu-data';
+import type { MenuItem, OrderItem, Order } from '@/lib/menu-data';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 declare global {
   interface Window {
@@ -25,13 +32,14 @@ export const Route = createFileRoute('/pos')({
 });
 
 function POSPage() {
-  const { items, categories, addOrder, brand, searchQuery } = useMenu();
+  const { items, categories, addOrder, brand, searchQuery, orders, posViewMode, setPosViewMode } = useMenu();
   const [activeCategory, setActiveCategory] = useState(categories[0]?.id ?? '');
   const [cart, setCart] = useState<OrderItem[]>([]);
   const defaultType = brand.orderingMode === 'takeaway' ? 'takeaway' : 'dine-in';
   const [orderType, setOrderType] = useState<'dine-in' | 'takeaway'>(defaultType);
   const [tableNumber, setTableNumber] = useState(1);
   const [orderSent, setOrderSent] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const filteredItems = items.filter(i => i.categoryId === activeCategory && i.available && i.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -82,8 +90,30 @@ function POSPage() {
         <WaiterCallsPanel />
       </div>
       <div className="flex h-[calc(100vh-4rem)]">
-        {/* Menu Section */}
-        <div className="flex-1 overflow-auto p-6">
+        {posViewMode === 'history' ? (
+          <div className="flex-1 overflow-auto p-6">
+             <h2 className="font-display text-2xl font-bold mb-6">Order History</h2>
+             <div className="grid gap-4">
+               {orders.map(order => (
+                 <Card key={order.id}>
+                   <CardContent className="p-4 flex justify-between items-center">
+                      <div>
+                        <p className="font-bold">Order #{order.orderNumber}</p>
+                        <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleString()} - {order.status}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold">{brand.currency}{order.total.toFixed(2)}</p>
+                        <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)}>Details</Button>
+                      </div>
+                   </CardContent>
+                 </Card>
+               ))}
+             </div>
+          </div>
+        ) : (
+          <>
+            {/* Menu Section */}
+            <div className="flex-1 overflow-auto p-6">
           {/* Categories */}
           <div className="mb-6 flex items-center justify-between gap-4">
             <div className="flex gap-2 overflow-x-auto pb-2 flex-1">
@@ -214,7 +244,100 @@ function POSPage() {
             </Button>
           </div>
         </div>
+        </>
+        )}
       </div>
+      <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Order Details #{selectedOrder?.orderNumber}</DialogTitle>
+            <DialogDescription>
+              Viewing the summary and items for this order.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                {selectedOrder.items.map((item, i) => (
+                  <div key={i} className="flex justify-between text-sm">
+                    <span>{item.quantity}x {item.menuItem.name}</span>
+                    <span>{brand.currency}{(item.menuItem.price * item.quantity).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t pt-2 flex justify-between font-bold">
+                <span>Total</span>
+                <span>{brand.currency}{selectedOrder.total.toFixed(2)}</span>
+              </div>
+              <Button className="w-full" onClick={() => window.print()}>
+                <Printer className="mr-2 h-4 w-4" /> Print Invoice
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Hidden printable invoice */}
+      {selectedOrder && (
+        <div className="printable-invoice" aria-hidden="true">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold uppercase tracking-tight">{brand.restaurantName}</h1>
+            <p className="text-sm text-gray-500 mt-1">{brand.tagline}</p>
+            <div className="mt-4 border-y border-gray-200 py-3">
+              <div className="flex justify-between text-sm">
+                <span>Order No:</span>
+                <span className="font-bold">#{selectedOrder.orderNumber}</span>
+              </div>
+              <div className="flex justify-between text-sm mt-1">
+                <span>Date:</span>
+                <span>{new Date(selectedOrder.createdAt).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-sm mt-1">
+                <span>Type:</span>
+                <span className="capitalize">{selectedOrder.orderType} {selectedOrder.tableNumber ? `(Table ${selectedOrder.tableNumber})` : ''}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 text-left">
+                  <th className="py-2">Item</th>
+                  <th className="py-2 text-center">Qty</th>
+                  <th className="py-2 text-right">Price</th>
+                  <th className="py-2 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedOrder.items.map((item, i) => (
+                  <tr key={i} className="border-b border-gray-100">
+                    <td className="py-2">
+                       <p className="font-medium">{item.menuItem.name}</p>
+                       {item.notes && <p className="text-xs text-gray-400 italic">Note: {item.notes}</p>}
+                    </td>
+                    <td className="py-2 text-center">{item.quantity}</td>
+                    <td className="py-2 text-right">{brand.currency}{item.menuItem.price.toFixed(2)}</td>
+                    <td className="py-2 text-right">{brand.currency}{(item.menuItem.price * item.quantity).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-8 space-y-2 border-t pt-4">
+            <div className="flex justify-between text-lg font-bold">
+              <span>Grand Total</span>
+              <span>{brand.currency}{selectedOrder.total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="mt-12 text-center">
+            <p className="text-sm font-medium">Thank you for your visit!</p>
+            <p className="text-xs text-gray-400 mt-1">Please come again soon</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

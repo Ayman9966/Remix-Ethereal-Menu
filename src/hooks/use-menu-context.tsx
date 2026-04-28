@@ -47,6 +47,8 @@ interface MenuContextType {
   clearCall: (id: string) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  posViewMode: 'pos' | 'history';
+  setPosViewMode: (mode: 'pos' | 'history') => void;
 }
 
 const MenuContext = createContext<MenuContextType | null>(null);
@@ -83,6 +85,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
   const [brand, setBrand] = useState<BrandSettings>(() => loadFromStorage('brand', defaultBrand));
   const [waiterCalls, setWaiterCalls] = useState<WaiterCall[]>(() => loadFromStorage('waiterCalls', [] as WaiterCall[]));
   const [searchQuery, setSearchQuery] = useState('');
+  const [posViewMode, setPosViewMode] = useState<'pos' | 'history'>('pos');
   const lastSeenIds = useRef<Set<string>>(new Set(waiterCalls.map(c => c.id)));
 
   // Initial load from Supabase (fallback to localStorage/defaults)
@@ -353,6 +356,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       updateOrder, addOrder, updateBrand,
       callWaiter, acknowledgeCall, clearCall,
       searchQuery, setSearchQuery,
+      posViewMode, setPosViewMode,
     }}>
       {children}
     </MenuContext.Provider>

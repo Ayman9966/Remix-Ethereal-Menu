@@ -156,6 +156,35 @@
   }
 }
 
+.printable-invoice {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .printable-invoice, .printable-invoice * {
+    visibility: visible !important;
+  }
+  .printable-invoice {
+    display: block !important;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    background: white;
+    color: black;
+    padding: 40px;
+    z-index: 9999;
+    font-family: 'Inter', sans-serif;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
 /* Hide scrollbars globally */
 * {
   scrollbar-width: none;

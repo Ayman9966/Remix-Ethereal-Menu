@@ -5,33 +5,10 @@ import { Clock3, Sparkles, UtensilsCrossed } from 'lucide-react';
 
 export const Route = createFileRoute('/board')({
   validateSearch: (search: Record<string, unknown>) => {
-    const cycleRaw = search.cycle;
-    const cycle =
-      typeof cycleRaw === 'number'
-        ? cycleRaw
-        : typeof cycleRaw === 'string'
-          ? parseInt(cycleRaw, 10)
-          : NaN;
-
-    const columnsRaw = search.columns;
-    const columns =
-      typeof columnsRaw === 'number'
-        ? columnsRaw
-        : typeof columnsRaw === 'string'
-          ? parseInt(columnsRaw, 10)
-          : NaN;
-
-    const showPhotosRaw = search.photos;
-    const showPhotos =
-      showPhotosRaw === true ||
-      showPhotosRaw === '1' ||
-      showPhotosRaw === 'true' ||
-      showPhotosRaw === 'yes';
-
     return {
-      cycle: Number.isFinite(cycle) && cycle > 0 ? Math.min(120, Math.max(5, cycle)) : 15,
-      columns: Number.isFinite(columns) && columns > 0 ? Math.min(4, Math.max(2, columns)) : 3,
-      photos: showPhotos,
+      cycle: typeof search.cycle === 'string' ? parseInt(search.cycle, 10) : (search.cycle as number | undefined),
+      columns: typeof search.columns === 'string' ? parseInt(search.columns, 10) : (search.columns as number | undefined),
+      photos: search.photos === 'true' ? true : search.photos === 'false' ? false : (search.photos as boolean | undefined),
     };
   },
   head: () => ({
@@ -42,11 +19,11 @@ export const Route = createFileRoute('/board')({
 
 function MenuBoardPage() {
   const { categories, items, brand } = useMenu();
-  Route.useSearch();
+  const search = Route.useSearch();
 
-  const cycle = Math.min(120, Math.max(5, brand.boardCycleSeconds ?? 15));
-  const columns = Math.min(4, Math.max(2, brand.boardColumns ?? 3));
-  const showPhotos = brand.boardShowPhotos ?? true;
+  const cycle = Math.min(120, Math.max(5, search.cycle ?? brand.boardCycleSeconds ?? 15));
+  const columns = Math.min(4, Math.max(2, search.columns ?? brand.boardColumns ?? 3));
+  const showPhotos = search.photos ?? brand.boardShowPhotos ?? true;
   const showPrice = brand.boardShowPrice ?? true;
   const showDescription = brand.boardShowDescription ?? true;
   const showPrepTime = brand.boardShowPrepTime ?? true;
