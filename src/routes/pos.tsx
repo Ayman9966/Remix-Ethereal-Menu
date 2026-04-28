@@ -368,10 +368,6 @@ function POSPage() {
                 <span className="font-bold">#{selectedOrder.orderNumber}</span>
               </div>
               <div className="flex justify-between text-sm mt-1">
-                <span>Date:</span>
-                <span>{new Date(selectedOrder.createdAt).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-sm mt-1">
                 <span>Type:</span>
                 <span className="capitalize">{selectedOrder.orderType} {selectedOrder.tableNumber ? `(Table ${selectedOrder.tableNumber})` : ''}</span>
               </div>
@@ -404,16 +400,15 @@ function POSPage() {
             </table>
           </div>
 
-          <div className="mt-8 space-y-2 border-t pt-4">
+          <div className="mt-4 space-y-2 border-t pt-4">
             <div className="flex justify-between text-lg font-bold">
               <span>Grand Total</span>
               <span>{brand.currency}{selectedOrder.total.toFixed(2)}</span>
             </div>
           </div>
 
-          <div className="mt-12 text-center">
-            <p className="text-sm font-medium">Thank you for your visit!</p>
-            <p className="text-xs text-gray-400 mt-1">Please come again soon</p>
+          <div className="mt-8 text-center text-sm">
+            <p className="font-medium">Thank you for your visit!</p>
           </div>
         </div>
       )}
