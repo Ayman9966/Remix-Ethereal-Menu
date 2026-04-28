@@ -359,56 +359,55 @@ function POSPage() {
       {/* Hidden printable invoice */}
       {selectedOrder && (
         <div className={`printable-invoice ${brand.invoiceSize === '58mm' ? 'invoice-58mm' : 'invoice-80mm'}`} aria-hidden="true">
-          <div className="text-center mb-4">
-            <h1 className="text-xl font-bold uppercase tracking-tight">{brand.restaurantName}</h1>
-            <p className="text-[10px] text-gray-500 mt-1">{brand.tagline}</p>
-            <div className="mt-2 border-y border-dashed border-gray-300 py-2">
-              <div className="flex justify-between text-sm">
-                <span>Order No:</span>
-                <span className="font-bold">#{selectedOrder.orderNumber}</span>
-              </div>
-              <div className="flex justify-between text-sm mt-1">
-                <span>Type:</span>
-                <span className="capitalize">{selectedOrder.orderType} {selectedOrder.tableNumber ? `(Table ${selectedOrder.tableNumber})` : ''}</span>
-              </div>
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold uppercase tracking-wider">{brand.restaurantName}</h1>
+          </div>
+          <div className="border-y border-dashed border-gray-400 py-3 mb-4 text-xs space-y-1">
+            <div className="flex justify-between">
+              <span>Order #</span>
+              <span className="font-bold">#{selectedOrder.orderNumber}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Table</span>
+              <span>{selectedOrder.tableNumber || 'N/A'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Type</span>
+              <span className="capitalize">{selectedOrder.orderType}</span>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 text-left">
-                  <th className="py-2">Item</th>
-                  <th className="py-2 text-center">Qty</th>
-                  <th className="py-2 text-right">Price</th>
-                  <th className="py-2 text-right">Total</th>
+          <table className="w-full text-xs">
+            <thead className="border-b border-dashed border-gray-400">
+              <tr className="text-left font-bold">
+                <th className="py-2">Item</th>
+                <th className="py-2 text-center">Qty</th>
+                <th className="py-2 text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {selectedOrder.items.map((item, i) => (
+                <tr key={i} className="border-b border-dotted border-gray-200">
+                  <td className="py-2">
+                     <p className="font-semibold">{item.menuItem.name}</p>
+                     {item.notes && <p className="text-[10px] text-gray-500 italic">Note: {item.notes}</p>}
+                  </td>
+                  <td className="py-2 text-center">{item.quantity}</td>
+                  <td className="py-2 text-right">{brand.currency}{(item.menuItem.price * item.quantity).toFixed(2)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {selectedOrder.items.map((item, i) => (
-                  <tr key={i} className="border-b border-gray-100">
-                    <td className="py-2">
-                       <p className="font-medium">{item.menuItem.name}</p>
-                       {item.notes && <p className="text-xs text-gray-400 italic">Note: {item.notes}</p>}
-                    </td>
-                    <td className="py-2 text-center">{item.quantity}</td>
-                    <td className="py-2 text-right">{brand.currency}{item.menuItem.price.toFixed(2)}</td>
-                    <td className="py-2 text-right">{brand.currency}{(item.menuItem.price * item.quantity).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
 
-          <div className="mt-4 space-y-2 border-t pt-4">
-            <div className="flex justify-between text-lg font-bold">
-              <span>Grand Total</span>
+          <div className="mt-6 border-t border-dashed border-gray-400 pt-3">
+            <div className="flex justify-between text-base font-bold">
+              <span>TOTAL</span>
               <span>{brand.currency}{selectedOrder.total.toFixed(2)}</span>
             </div>
           </div>
 
-          <div className="mt-8 text-center text-sm">
-            <p className="font-medium">Thank you for your visit!</p>
+          <div className="mt-8 text-center text-xs border-t border-dashed border-gray-400 pt-4">
+            <p>Thank you for dining with us!</p>
           </div>
         </div>
       )}
