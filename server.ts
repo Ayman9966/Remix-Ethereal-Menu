@@ -1,10 +1,10 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
 import NodeCache from "node-cache";
 import dotenv from "dotenv";
+import fs from "fs";
 
 dotenv.config();
 
@@ -53,6 +53,7 @@ async function fetchBootstrapData() {
 async function startServer() {
   const app = express();
   const PORT = 3000;
+  const rootPath = process.cwd();
 
   app.use(express.json());
 
@@ -82,13 +83,27 @@ async function startServer() {
 
   // Vite middleware or static serving
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "spa",
+      appType: "custom",
     });
+    
     app.use(vite.middlewares);
+    
+    app.get("*", async (req, res, next) => {
+      const url = req.originalUrl;
+      try {
+        let template = fs.readFileSync(path.resolve(rootPath, "index.html"), "utf-8");
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ "Content-Type": "text/html" }).end(template);
+      } catch (e) {
+        vite.ssrFixStacktrace(e as Error);
+        next(e);
+      }
+    });
   } else {
-    const distPath = path.join(__dirname, "dist");
+    const distPath = path.join(rootPath, "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));

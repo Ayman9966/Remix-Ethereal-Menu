@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --format=esm --outfile=dist/server.js --external:express --external:@supabase/supabase-js --external:node-cache --external:dotenv --external:fs --external:path --external:url",
     "preview": "vite preview",
-    "start": "node dist/server.cjs",
+    "start": "node dist/server.js",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
   },
@@ -79,6 +79,7 @@
     "@types/react-dom": "^18.3.7",
     "@types/recharts": "^1.8.29",
     "autoprefixer": "^10.4.21",
+    "esbuild": "^0.28.0",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
