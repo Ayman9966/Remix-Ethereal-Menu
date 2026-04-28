@@ -49,6 +49,7 @@ type DbOrder = {
   table_number: number | null;
   total: number | string;
   created_at: string;
+  updated_at: string;
 };
 
 type DbOrderItem = {
@@ -126,6 +127,7 @@ function mapOrder(order: DbOrder, items: OrderItem[]): Order {
     orderType: order.order_type,
     tableNumber: order.table_number ?? undefined,
     createdAt: new Date(order.created_at),
+    updatedAt: new Date(order.updated_at),
     total: toNumber(order.total),
     items,
   };
@@ -196,7 +198,7 @@ export async function fetchOrders(limit = 200): Promise<Order[]> {
 
   const { data: orderRows, error: orderErr } = await supabase
     .from('orders')
-    .select('id,order_number,status,order_type,table_number,total,created_at')
+    .select('id,order_number,status,order_type,table_number,total,created_at,updated_at')
     .order('created_at', { ascending: false })
     .limit(limit);
   if (orderErr) throw orderErr;
@@ -232,6 +234,46 @@ export async function fetchBootstrapData(): Promise<{
   brand: BrandSettings;
   orders: Order[];
 }> {
+  // Try to fetch from server-side cache first
+  try {
+    const response = await fetch('/api/bootstrap');
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Map the DB rows to our local types (same as in existing fetchers)
+      // Note: we need to use the mapping functions defined in this file
+      
+      const categories = (data.categories ?? []).map(mapCategory);
+      const items = (data.items ?? []).map(mapMenuItem);
+      
+      const orders = (data.orders ?? []).map((o: any) => {
+        const mappedItems = (o.order_items || []).map((oi: any) => ({
+          quantity: oi.quantity,
+          notes: oi.notes ?? undefined,
+          menuItem: mapMenuItem(oi.menu_items)
+        }));
+        // Map top level order props
+        const dbOrder: DbOrder = {
+          id: o.id,
+          order_number: o.order_number,
+          status: o.status,
+          order_type: o.order_type,
+          table_number: o.table_number,
+          total: o.total,
+          created_at: o.created_at,
+          updated_at: o.updated_at
+        };
+        return mapOrder(dbOrder, mappedItems);
+      });
+      
+      const brand = data.brand ? mapBrand(data.brand, (data.orders?.[0]?.order_number ?? 0) + 1) : defaultBrand;
+
+      return { categories, items, brand, orders };
+    }
+  } catch (e) {
+    console.warn("Failed to fetch from server cache, falling back to direct Supabase:", e);
+  }
+
   const supabase = getSupabaseClient();
   if (!supabase) {
     return {
@@ -297,6 +339,7 @@ export async function upsertCategory(cat: Category): Promise<void> {
     sort_order: cat.order,
   });
   if (error) throw error;
+  fetch('/api/cache/invalidate', { method: 'POST' }).catch(() => undefined);
 }
 
 export async function deleteCategory(id: string): Promise<void> {
@@ -304,6 +347,7 @@ export async function deleteCategory(id: string): Promise<void> {
   if (!supabase) return;
   const { error } = await supabase.from('categories').delete().eq('id', id);
   if (error) throw error;
+  fetch('/api/cache/invalidate', { method: 'POST' }).catch(() => undefined);
 }
 
 export async function upsertMenuItem(item: MenuItem): Promise<void> {
@@ -320,6 +364,7 @@ export async function upsertMenuItem(item: MenuItem): Promise<void> {
     preparation_time: item.preparationTime,
   });
   if (error) throw error;
+  fetch('/api/cache/invalidate', { method: 'POST' }).catch(() => undefined);
 }
 
 export async function deleteMenuItem(id: string): Promise<void> {
@@ -327,6 +372,7 @@ export async function deleteMenuItem(id: string): Promise<void> {
   if (!supabase) return;
   const { error } = await supabase.from('menu_items').delete().eq('id', id);
   if (error) throw error;
+  fetch('/api/cache/invalidate', { method: 'POST' }).catch(() => undefined);
 }
 
 export async function upsertBrandSettings(brand: BrandSettings): Promise<void> {
@@ -383,6 +429,7 @@ export async function upsertBrandSettings(brand: BrandSettings): Promise<void> {
       if (legacyError) throw legacyError;
     }
   }
+  fetch('/api/cache/invalidate', { method: 'POST' }).catch(() => undefined);
 }
 
 export async function createOrder(order: Omit<Order, 'orderNumber'>): Promise<Order> {
@@ -400,7 +447,7 @@ export async function createOrder(order: Omit<Order, 'orderNumber'>): Promise<Or
       table_number: order.tableNumber ?? null,
       total: order.total,
     })
-    .select('id,order_number,status,order_type,table_number,total,created_at')
+    .select('id,order_number,status,order_type,table_number,total,created_at,updated_at')
     .single();
   if (orderErr) throw orderErr;
 
@@ -415,6 +462,7 @@ export async function createOrder(order: Omit<Order, 'orderNumber'>): Promise<Or
   const { error: oiErr } = await supabase.from('order_items').insert(oiRows);
   if (oiErr) throw oiErr;
 
+  fetch('/api/cache/invalidate', { method: 'POST' }).catch(() => undefined);
   return mapOrder(insertedOrder as DbOrder, order.items);
 }
 
@@ -429,5 +477,6 @@ export async function updateOrderStatus(
     .update({ status })
     .eq('id', orderId);
   if (error) throw error;
+  fetch('/api/cache/invalidate', { method: 'POST' }).catch(() => undefined);
 }
 

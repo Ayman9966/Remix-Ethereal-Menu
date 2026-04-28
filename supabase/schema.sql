@@ -11,7 +11,7 @@
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_status') THEN
-    CREATE TYPE public.order_status AS ENUM ('pending', 'preparing', 'ready', 'served');
+    CREATE TYPE public.order_status AS ENUM ('pending', 'preparing', 'ready', 'served', 'ready_to_pickup', 'picked');
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_type') THEN
     CREATE TYPE public.order_type AS ENUM ('dine-in', 'takeaway');

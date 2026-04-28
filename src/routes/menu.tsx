@@ -2,8 +2,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMenu } from '@/hooks/use-menu-context';
 import { Search, Clock, UtensilsCrossed, Plus, Minus, ShoppingCart, X, Send, Check, Package, Bell } from 'lucide-react';
 import { toast } from 'sonner';
-import { useState, useEffect } from 'react';
-import type { MenuItem, OrderItem } from '@/lib/menu-data';
+import { useState, useEffect, useMemo } from 'react';
+import type { MenuItem, OrderItem, Order } from '@/lib/menu-data';
 
 export const Route = createFileRoute('/menu')({
   validateSearch: (search: Record<string, unknown>): { table?: number } => {
@@ -21,18 +21,17 @@ export const Route = createFileRoute('/menu')({
 });
 
 function CustomerMenuPage() {
-  const { items, categories, brand, addOrder, callWaiter, waiterCalls } = useMenu();
+  const { items, categories, brand, orders, addOrder, callWaiter, waiterCalls } = useMenu();
   const { table: lockedTable } = Route.useSearch();
   const [showCallWaiter, setShowCallWaiter] = useState(false);
   const [callTable, setCallTable] = useState(lockedTable ?? 1);
   const [now, setNow] = useState(() => Date.now());
 
-  // Tick every second while modal is open so countdown updates
+  // Tick every second to update relative times and cooldowns
   useEffect(() => {
-    if (!showCallWaiter) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [showCallWaiter]);
+  }, []);
 
   const COOLDOWN_MS = 60_000;
   const lastCallForTable = waiterCalls
@@ -51,6 +50,94 @@ function CustomerMenuPage() {
   const [orderType, setOrderType] = useState<'dine-in' | 'takeaway'>(defaultType);
   const [tableNumber, setTableNumber] = useState(lockedTable ?? 1);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [showMyOrders, setShowMyOrders] = useState(false);
+  const [myOrderIds, setMyOrderIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('my_takeaway_orders');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Save myOrderIds to localStorage
+  useEffect(() => {
+    localStorage.setItem('my_takeaway_orders', JSON.stringify(myOrderIds));
+  }, [myOrderIds]);
+
+  // Handle migration from localId to realId (or cross-tab sync)
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'my_takeaway_orders' && e.newValue) {
+        try {
+          const nextIds = JSON.parse(e.newValue);
+          setMyOrderIds(nextIds);
+        } catch (err) {
+          console.error('Failed to parse my_takeaway_orders from storage:', err);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  // Filter active my orders (10min after picked, 3h limit overall)
+  const myActiveOrders = useMemo(() => {
+    const TEN_MINS = 10 * 60 * 1000;
+    const THREE_HOURS = 3 * 60 * 60 * 1000;
+    const now = Date.now();
+    return orders.filter(o => {
+      if (!myOrderIds.includes(o.id)) return false;
+      
+      const age = now - new Date(o.createdAt).getTime();
+      const ageSinceUpdate = now - new Date(o.updatedAt).getTime();
+      
+      // If order is not picked, keep it for up to 3 hours
+      if (o.status !== 'picked') {
+        return age < THREE_HOURS;
+      }
+      
+      // If order IS picked, keep it for 10 minutes after it was marked picked
+      return ageSinceUpdate < TEN_MINS;
+    });
+  }, [orders, myOrderIds]);
+
+  const getRelativeTime = (date: Date) => {
+    const diff = Math.floor((now - new Date(date).getTime()) / 60000);
+    if (diff < 1) return 'just now';
+    if (diff < 60) return `${diff}m ago`;
+    return `${Math.floor(diff / 60)}h ${diff % 60}m ago`;
+  };
+
+  // Periodically clean up locally stored order IDs older than 3 hours
+  useEffect(() => {
+    const cleanup = () => {
+      const THREE_HOURS = 3 * 60 * 60 * 1000;
+      const now = Date.now();
+      setMyOrderIds(prev => {
+        const filtered = prev.filter(id => {
+          // If it's a real order ID (UUID from server), it might not have the timestamp
+          // But our local IDs are ord-TIMESTAMP
+          const parts = id.split('-');
+          if (parts.length >= 2 && parts[0] === 'ord') {
+            const timestamp = parseInt(parts[1]);
+            if (!isNaN(timestamp)) {
+              return (now - timestamp) < THREE_HOURS;
+            }
+          }
+          // For server UUIDs, check if we have the order in our current list
+          const order = orders.find(o => o.id === id);
+          if (order) {
+            return (now - new Date(order.createdAt).getTime()) < THREE_HOURS;
+          }
+          // If we can't find it in orders and it's not our local format, 
+          // assume it's old and remove after some time (best effort)
+          return true; 
+        });
+        return filtered.length !== prev.length ? filtered : prev;
+      });
+    };
+
+    cleanup();
+    const interval = setInterval(cleanup, 60000);
+    return () => clearInterval(interval);
+  }, [orders]);
 
   // If the URL provides a table (e.g. from QR /t5), keep state locked to it
   useEffect(() => {
@@ -101,15 +188,22 @@ function CustomerMenuPage() {
 
   const placeOrder = () => {
     if (cart.length === 0) return;
+    const orderId = `ord-${Date.now()}`;
     addOrder({
-      id: `ord-${Date.now()}`,
+      id: orderId,
       items: cart,
       status: 'pending',
       orderType,
       tableNumber: orderType === 'dine-in' ? tableNumber : undefined,
       createdAt: new Date(),
+      updatedAt: new Date(),
       total,
     });
+    
+    if (orderType === 'takeaway') {
+      setMyOrderIds(prev => [orderId, ...prev]);
+    }
+    
     setCart([]);
     setShowCart(false);
     setOrderPlaced(true);
@@ -277,6 +371,92 @@ function CustomerMenuPage() {
             <span className="font-medium">Order placed successfully!</span>
           </div>
         </div>
+      )}
+
+      {/* Floating My Orders Button (Takeaway tracking) */}
+      {myActiveOrders.length > 0 && !showCart && !showMyOrders && (
+        <button
+          onClick={() => setShowMyOrders(true)}
+          className={`fixed z-40 flex items-center gap-2 rounded-2xl bg-success px-5 py-3.5 text-success-foreground shadow-ambient transition-all hover:shadow-lg active:scale-95 ${
+            ordering && cartCount > 0 ? 'bottom-40 right-6' : 'bottom-24 right-6'
+          }`}
+          aria-label="My orders"
+        >
+          <UtensilsCrossed className="h-5 w-5" />
+          <span className="text-sm font-medium">My Orders ({myActiveOrders.length})</span>
+        </button>
+      )}
+
+      {/* My Orders Modal */}
+      {showMyOrders && (
+        <>
+          <div className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm" onClick={() => setShowMyOrders(false)} />
+          <div className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-lg animate-in slide-in-from-bottom rounded-t-3xl bg-card p-6 shadow-ambient">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-display text-lg font-semibold text-foreground">Order Status</h3>
+              <button onClick={() => setShowMyOrders(false)} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground hover:bg-surface-low">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="max-h-[60vh] space-y-4 overflow-auto py-2">
+              {myActiveOrders.length === 0 ? (
+                <p className="py-8 text-center text-muted-foreground">No orders in progress.</p>
+              ) : (
+                myActiveOrders.map((order: Order) => (
+                  <div key={order.id} className="rounded-2xl border border-border/50 bg-surface-low p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        <span className="font-display text-lg font-bold text-primary">Order #{String(order.orderNumber).padStart(3, '0')}</span>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>{getRelativeTime(order.createdAt)}</span>
+                        </div>
+                      </div>
+                      <div className={`rounded-xl px-3 py-1 text-xs font-bold uppercase tracking-wider ${
+                        order.status === 'ready_to_pickup' ? 'bg-success text-success-foreground animate-pulse' : 
+                        order.status === 'picked' ? 'bg-muted text-muted-foreground' : 'bg-primary/20 text-primary'
+                      }`}>
+                        {order.status === 'pending' && 'Received'}
+                        {order.status === 'preparing' && 'In Kitchen'}
+                        {order.status === 'ready_to_pickup' && 'Ready to Collect!'}
+                        {order.status === 'picked' && 'Picked Up'}
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-1">
+                      {order.items.map((item: any, i: number) => (
+                        <span key={i} className="rounded-lg bg-card px-2 py-1 text-[10px] font-medium text-muted-foreground">
+                          {item.quantity}x {item.menuItem.name}
+                        </span>
+                      ))}
+                    </div>
+
+                    {order.status === 'ready_to_pickup' && (
+                      <div className="mt-4 flex items-center gap-2 rounded-xl bg-success/10 p-3 text-xs font-medium text-success">
+                        <Package className="h-4 w-4" />
+                        Your food is ready! Please collect it from the counter.
+                      </div>
+                    )}
+                    {order.status === 'picked' && (
+                      <div className="mt-4 flex items-center gap-2 rounded-xl bg-primary/10 p-3 text-xs font-medium text-primary">
+                        <Check className="h-4 w-4" />
+                        Enjoy your meal!
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+            
+            <button
+              onClick={() => setShowMyOrders(false)}
+              className="mt-6 w-full rounded-2xl bg-surface-low py-3 text-sm font-medium text-foreground hover:bg-muted-foreground/10"
+            >
+              Close
+            </button>
+          </div>
+        </>
       )}
 
       {/* Floating Call Waiter Button (only when dine-in available) */}

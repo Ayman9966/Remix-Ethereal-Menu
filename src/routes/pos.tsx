@@ -41,6 +41,46 @@ function POSPage() {
   const [orderSent, setOrderSent] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - scrollRef.current.offsetLeft);
+    setScrollLeft(scrollRef.current.scrollLeft);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !scrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 2;
+    scrollRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending: 'New',
+      preparing: 'Cooking',
+      ready: 'Ready',
+      ready_to_pickup: 'Ready to Pickup',
+      served: 'Served',
+      picked: 'Picked Up',
+    };
+    return labels[status] || status;
+  };
+
   const filteredItems = items.filter(i => i.categoryId === activeCategory && i.available && i.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const addToCart = (item: MenuItem) => {
@@ -76,6 +116,7 @@ function POSPage() {
       orderType,
       tableNumber: orderType === 'dine-in' ? tableNumber : undefined,
       createdAt: new Date(),
+      updatedAt: new Date(),
       total,
     });
     setCart([]);
@@ -99,7 +140,7 @@ function POSPage() {
                    <CardContent className="p-4 flex justify-between items-center">
                       <div>
                         <p className="font-bold">Order #{order.orderNumber}</p>
-                        <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleString()} - {order.status}</p>
+                        <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleString()} - <span className="font-medium text-primary">{getStatusLabel(order.status)}</span></p>
                       </div>
                       <div className="flex items-center gap-2">
                         <p className="font-bold">{brand.currency}{order.total.toFixed(2)}</p>
@@ -115,41 +156,62 @@ function POSPage() {
             {/* Menu Section */}
             <div className="flex-1 overflow-auto p-6">
           {/* Categories */}
-          <div className="mb-6 flex items-center justify-between gap-4">
-            <div className="flex gap-2 overflow-x-auto pb-2 flex-1">
-              {categories.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`flex shrink-0 items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all duration-200 ${
-                    activeCategory === cat.id
-                      ? 'gradient-primary text-primary-foreground shadow-ambient-sm'
-                      : 'bg-card text-muted-foreground hover:bg-surface-low'
-                  }`}
-                >
-                  <span>{cat.icon}</span>
-                  {cat.name}
-                </button>
-              ))}
+          <div className="mb-4 group relative">
+            <div 
+              ref={scrollRef}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeave}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+              className={`flex gap-2 overflow-x-auto pb-2 no-scrollbar snap-x ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab scroll-smooth'}`}
+            >
+              {categories.map(cat => {
+                const isActive = activeCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    id={`cat-${cat.id}`}
+                    onClick={() => {
+                      if (isDragging) return; // Prevent click during drag
+                      setActiveCategory(cat.id);
+                      document.getElementById(`cat-${cat.id}`)?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest',
+                        inline: 'center'
+                      });
+                    }}
+                    className={`flex shrink-0 snap-center items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-300 ${
+                      isActive
+                        ? 'gradient-primary text-primary-foreground shadow-ambient-sm ring-1 ring-primary'
+                        : 'bg-card text-muted-foreground hover:bg-surface-low border border-border/40'
+                    }`}
+                  >
+                    <span className="text-lg">{cat.icon}</span>
+                    <span className="whitespace-nowrap">{cat.name}</span>
+                  </button>
+                );
+              })}
             </div>
+            
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-background to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
           </div>
 
           {/* Items Grid */}
-          <div className="grid grid-cols-3 gap-3 md:grid-cols-4 xl:grid-cols-5">
+          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-4 xl:grid-cols-5">
             {filteredItems.map(item => (
               <Card
                 key={item.id}
-                className="cursor-pointer transition-all duration-200 hover:shadow-ambient hover:-translate-y-0.5 active:scale-[0.98]"
+                className="cursor-pointer transition-all duration-200 hover:shadow-ambient hover:-translate-y-0.5 active:scale-[0.98] border-border/30 overflow-hidden"
                 onClick={() => addToCart(item)}
               >
                 <CardContent className="p-0">
                   {item.image && (
-                    <img src={item.image} alt={item.name} loading="lazy" width={512} height={512} className="h-20 w-full rounded-t-2xl object-cover" />
+                    <img src={item.image} alt={item.name} loading="lazy" width={128} height={128} className="h-14 w-full object-cover" />
                   )}
-                  <div className="p-3">
-                    <h4 className="font-display text-xs font-semibold text-foreground">{item.name}</h4>
-                    <p className="mt-1 text-[10px] text-muted-foreground line-clamp-2">{item.description}</p>
-                    <p className="mt-1.5 font-display text-sm font-bold text-primary">{brand.currency}{item.price.toFixed(2)}</p>
+                  <div className="p-1.5 px-2">
+                    <h4 className="font-display text-[10px] sm:text-[11px] font-semibold text-foreground line-clamp-1">{item.name}</h4>
+                    <p className="mt-0.5 font-display text-xs font-bold text-primary leading-none">{brand.currency}{item.price.toFixed(2)}</p>
                   </div>
                 </CardContent>
               </Card>

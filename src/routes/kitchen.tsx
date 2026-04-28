@@ -3,6 +3,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { useMenu } from '@/hooks/use-menu-context';
 import { Button } from '@/components/ui/button';
 import { Clock, CheckCircle, ChefHat, Bell, Package } from 'lucide-react';
+import type { Order } from '@/lib/menu-data';
 
 export const Route = createFileRoute('/kitchen')({
   head: () => ({
@@ -17,16 +18,18 @@ export const Route = createFileRoute('/kitchen')({
 function KitchenPage() {
   const { orders, updateOrder } = useMenu();
 
-  const activeOrders = orders.filter(o => o.status !== 'served');
+  const activeOrders = orders.filter(o => o.status !== 'served' && o.status !== 'picked');
   const pendingOrders = activeOrders.filter(o => o.status === 'pending');
   const preparingOrders = activeOrders.filter(o => o.status === 'preparing');
-  const readyOrders = activeOrders.filter(o => o.status === 'ready');
+  const readyOrders = activeOrders.filter(o => o.status === 'ready' || o.status === 'ready_to_pickup');
 
-  const statusConfig = {
+  const statusConfig: Record<string, { label: string, color: string, icon: any }> = {
     pending: { label: 'New', color: 'bg-warning text-warning-foreground', icon: Bell },
     preparing: { label: 'Cooking', color: 'gradient-primary text-primary-foreground', icon: ChefHat },
     ready: { label: 'Ready', color: 'bg-success text-success-foreground', icon: CheckCircle },
+    ready_to_pickup: { label: 'Ready to Pickup', color: 'bg-success text-success-foreground', icon: Package },
     served: { label: 'Served', color: 'bg-muted text-muted-foreground', icon: CheckCircle },
+    picked: { label: 'Picked Up', color: 'bg-muted text-muted-foreground', icon: CheckCircle },
   };
 
   const statusColumns = [
@@ -35,10 +38,15 @@ function KitchenPage() {
     { title: 'Ready', orders: readyOrders },
   ];
 
-  const nextStatus = (status: string) => {
-    const flow = ['pending', 'preparing', 'ready', 'served'] as const;
-    const idx = flow.indexOf(status as typeof flow[number]);
-    return idx < flow.length - 1 ? flow[idx + 1] : null;
+  const nextStatus = (order: Order) => {
+    const status = order.status;
+    const isTakeaway = order.orderType === 'takeaway';
+
+    if (status === 'pending') return 'preparing';
+    if (status === 'preparing') return isTakeaway ? 'ready_to_pickup' : 'ready';
+    if (status === 'ready') return 'served';
+    if (status === 'ready_to_pickup') return 'picked';
+    return null;
   };
 
   const getElapsed = (date: Date) => {
@@ -78,8 +86,8 @@ function KitchenPage() {
                 <div className="space-y-4">
                   {col.orders.map(order => {
                     const config = statusConfig[order.status];
-                    const next = nextStatus(order.status);
-                    const Icon = config.icon;
+                    const next = nextStatus(order);
+                    const Icon = config?.icon || CheckCircle;
                     return (
                       <div
                         key={order.id}
@@ -115,8 +123,8 @@ function KitchenPage() {
                             onClick={() => updateOrder({ ...order, status: next })}
                           >
                             {next === 'preparing' && 'Start Preparing'}
-                            {next === 'ready' && 'Mark Ready'}
-                            {next === 'served' && 'Mark Served'}
+                            {(next === 'ready' || next === 'ready_to_pickup') && (order.orderType === 'takeaway' ? 'Ready to Pickup' : 'Mark Ready')}
+                            {(next === 'served' || next === 'picked') && (order.orderType === 'takeaway' ? 'Mark Picked' : 'Mark Served')}
                           </Button>
                         )}
                       </div>

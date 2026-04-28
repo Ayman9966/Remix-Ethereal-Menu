@@ -1,8 +1,7 @@
 import { Link, useLocation } from '@tanstack/react-router';
-import { UtensilsCrossed, LayoutGrid, ChefHat, Menu as MenuIcon, Settings, X, Search } from 'lucide-react';
+import { UtensilsCrossed, LayoutGrid, ChefHat, Menu as MenuIcon, Settings, X, Search, Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { useMenu } from '@/hooks/use-menu-context';
-import { ConnectionStatus } from '@/components/ConnectionStatus';
 
 const navItems = [
   { to: '/pos', label: 'POS', icon: LayoutGrid },
@@ -10,6 +9,36 @@ const navItems = [
   { to: '/menu', label: 'Digital Menu', icon: UtensilsCrossed },
   { to: '/admin', label: 'Admin', icon: Settings },
 ] as const;
+
+function SyncStatusIndicator() {
+  const { syncStatus, pendingChangesCount } = useMenu();
+
+  if (syncStatus === 'synced') {
+    return (
+      <div className="flex h-9 w-9 items-center justify-center text-emerald-500 hover:bg-surface-low rounded-lg transition-colors" title="Synced">
+        <Cloud className="h-5 w-5" />
+      </div>
+    );
+  }
+
+  if (syncStatus === 'offline') {
+    return (
+      <div className="flex h-9 w-9 items-center justify-center text-slate-400 hover:bg-surface-low rounded-lg transition-colors" title="Offline">
+        <CloudOff className="h-5 w-5" />
+      </div>
+    );
+  }
+
+  if (syncStatus === 'syncing' || pendingChangesCount > 0) {
+    return (
+      <div className="flex h-9 w-9 items-center justify-center text-amber-500 hover:bg-surface-low rounded-lg transition-colors" title={pendingChangesCount > 0 ? `${pendingChangesCount} pending` : 'Syncing...'}>
+        <RefreshCw className="h-5 w-5 animate-spin" />
+      </div>
+    );
+  }
+
+  return null;
+}
 
 export function AppHeader() {
   const location = useLocation();
@@ -50,7 +79,8 @@ export function AppHeader() {
           </div>
         )}
 
-        <nav className="hidden items-center gap-1 md:flex">
+        <div className="hidden items-center gap-4 md:flex">
+          <nav className="flex items-center gap-1">
           {visibleNavItems.map(({ to, label, icon: Icon }) => {
             const active = location.pathname === to;
             
@@ -98,10 +128,11 @@ export function AppHeader() {
               </Link>
             );
           })}
-        </nav>
+          </nav>
+        </div>
 
         <div className="flex items-center gap-1">
-          <ConnectionStatus />
+          <SyncStatusIndicator />
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-surface-low md:hidden"

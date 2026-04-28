@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react';
 import {
   type MenuItem, type Category, type Order, type BrandSettings, type WaiterCall,
   defaultMenuItems, defaultCategories, sampleOrders, defaultBrand,
@@ -12,14 +12,9 @@ import {
   fetchCategories,
   fetchMenuItems,
   fetchOrders,
-  upsertMenuItem,
-  deleteMenuItem,
-  upsertCategory,
-  deleteCategory,
-  upsertBrandSettings,
-  createOrder,
-  updateOrderStatus,
 } from '@/lib/supabase-store';
+import { syncEngine } from '@/lib/sync-engine';
+import { useOnlineStatus } from './use-online-status';
 
 declare global {
   interface Window {
@@ -49,6 +44,8 @@ interface MenuContextType {
   setSearchQuery: (query: string) => void;
   posViewMode: 'pos' | 'history';
   setPosViewMode: (mode: 'pos' | 'history') => void;
+  syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
+  pendingChangesCount: number;
 }
 
 const MenuContext = createContext<MenuContextType | null>(null);
@@ -86,7 +83,170 @@ export function MenuProvider({ children }: { children: ReactNode }) {
   const [waiterCalls, setWaiterCalls] = useState<WaiterCall[]>(() => loadFromStorage('waiterCalls', [] as WaiterCall[]));
   const [searchQuery, setSearchQuery] = useState('');
   const [posViewMode, setPosViewMode] = useState<'pos' | 'history'>('pos');
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('synced');
+  const [pendingChangesCount, setPendingChangesCount] = useState(0);
+  const [syncQueue, setSyncQueue] = useState<any[]>([]); // To track pending mutations for merging
+  const [recentlyCompleted, setRecentlyCompleted] = useState<Record<string, { status: string, timestamp: number }>>({});
+  const { isOnline } = useOnlineStatus();
   const lastSeenIds = useRef<Set<string>>(new Set(waiterCalls.map(c => c.id)));
+
+  const syncQueueRef = useRef<any[]>([]);
+  const isOnlineRef = useRef(isOnline);
+  useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
+
+  // Helper to merge server data with pending local mutations
+  const mergeWithPending = useCallback((serverOrders: Order[], currentQueue: any[], completed: Record<string, { status: string, timestamp: number }>) => {
+    const now = Date.now();
+    
+    // 1. Start with server orders, applying pending status updates
+    const merged = serverOrders.map(order => {
+      // Check current sync queue for status updates
+      const pendingUpdates = currentQueue
+        .filter(op => op.type === 'UPDATE_ORDER_STATUS' && op.payload.id === order.id)
+        .sort((a, b) => b.timestamp - a.timestamp);
+      
+      if (pendingUpdates.length > 0) {
+        return { ...order, status: pendingUpdates[0].payload.status };
+      }
+
+      // Check recently completed updates
+      const recent = completed[order.id];
+      if (recent && now - recent.timestamp < 5000) {
+        return { ...order, status: recent.status };
+      }
+
+      return order;
+    });
+
+    // 2. Add pending NEW orders from the queue
+    const pendingNewOrders = currentQueue
+      .filter(op => op.type === 'CREATE_ORDER')
+      .map(op => {
+        return {
+          ...op.payload,
+          orderNumber: op.payload.orderNumber || 0,
+          createdAt: new Date(op.payload.createdAt || now),
+          updatedAt: new Date(op.payload.updatedAt || op.payload.createdAt || now)
+        } as Order;
+      });
+
+    // 3. Add RECENTLY created orders that might not be in server list yet
+    const recentlyCreatedOrders = Object.values(completed)
+      .filter((c: any) => c.isNew && now - c.timestamp < 10000)
+      .map((c: any) => c.originalData as Order);
+
+    // Combine everything, avoiding duplicates
+    const finalOrders = [...merged];
+    
+    // Add pending from queue (highest priority for local interactivity)
+    pendingNewOrders.forEach(pending => {
+      if (!finalOrders.some(o => o.id === pending.id)) {
+        finalOrders.unshift(pending);
+      }
+    });
+
+    // Add recently completed results (migration bridge)
+    recentlyCreatedOrders.forEach(recent => {
+      if (!finalOrders.some(o => o.id === recent.id)) {
+        finalOrders.unshift(recent);
+      }
+    });
+
+    return finalOrders;
+  }, []);
+
+  const mergedOrders = useMemo(() => mergeWithPending(orders, syncQueue, recentlyCompleted), [orders, syncQueue, recentlyCompleted, mergeWithPending]);
+
+  // Listen to sync engine status
+  useEffect(() => {
+    syncEngine.setStatusCallback((status, count, queue) => {
+      // Detect completed operations
+      const prevQueue = syncQueueRef.current;
+      const completedIds = prevQueue
+        .filter(prevOp => !queue.some(currOp => currOp.id === prevOp.id))
+        .filter(op => op.type === 'UPDATE_ORDER_STATUS');
+
+      if (completedIds.length > 0) {
+        setRecentlyCompleted(prev => {
+          const next = { ...prev };
+          completedIds.forEach(op => {
+            next[op.payload.id] = { status: op.payload.status, timestamp: Date.now() };
+          });
+          return next;
+        });
+      }
+
+      setSyncStatus(status === 'synced' ? (isOnlineRef.current ? 'synced' : 'offline') : status);
+      setPendingChangesCount(count);
+      setSyncQueue(queue);
+      syncQueueRef.current = queue;
+    });
+
+    syncEngine.setOperationCompleteCallback((type, payload, result) => {
+      if (type === 'CREATE_ORDER' && result && result.id) {
+        // Migration: The localId (payload.id) is now realId (result.id)
+        const localId = payload.id;
+        const realId = result.id;
+
+        // Keep track of this as "recently created" so it doesn't vanish before next fetch
+        setRecentlyCompleted(prev => ({
+          ...prev,
+          [realId]: { status: result.status, timestamp: Date.now(), isNew: true, originalData: result }
+        }));
+
+        // Update localStorage for takeaway tracking
+        const saved = localStorage.getItem('my_takeaway_orders');
+        if (saved) {
+          try {
+            const ids: string[] = JSON.parse(saved);
+            const idx = ids.indexOf(localId);
+            if (idx !== -1) {
+              ids[idx] = realId;
+              localStorage.setItem('my_takeaway_orders', JSON.stringify(ids));
+              // Dispatch storage event so current tab's state updates if it's listening
+              window.dispatchEvent(new StorageEvent('storage', {
+                key: 'my_takeaway_orders',
+                newValue: JSON.stringify(ids)
+              }));
+            }
+          } catch (e) {
+            console.error('Migration failed:', e);
+          }
+        }
+      }
+    });
+
+    return () => {
+      syncEngine.setStatusCallback(() => {});
+      syncEngine.setOperationCompleteCallback(() => {});
+    };
+  }, []); // Run once
+
+  // Periodically clean up recentlyCompleted
+  useEffect(() => {
+    const id = setInterval(() => {
+      const now = Date.now();
+      setRecentlyCompleted(prev => {
+        const next = { ...prev };
+        let changed = false;
+        Object.entries(next).forEach(([id, data]) => {
+          if (now - data.timestamp > 7000) {
+            delete next[id];
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }, 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Sync when coming back online
+  useEffect(() => {
+    if (isOnline) {
+      syncEngine.processQueue();
+    }
+  }, [isOnline]);
 
   // Initial load from Supabase (fallback to localStorage/defaults)
   useEffect(() => {
@@ -241,77 +401,46 @@ export function MenuProvider({ children }: { children: ReactNode }) {
 
   const addItem = useCallback((item: MenuItem) => {
     setItems(prev => [...prev, item]);
-    upsertMenuItem(item).catch((e: unknown) => {
-      toast.error('Supabase: failed to save menu item', { description: e instanceof Error ? e.message : String(e) });
-    });
+    syncEngine.enqueue('UPSERT_ITEM', item);
   }, []);
   const updateItem = useCallback((item: MenuItem) => {
     setItems(prev => prev.map(i => i.id === item.id ? item : i));
-    upsertMenuItem(item).catch((e: unknown) => {
-      toast.error('Supabase: failed to update menu item', { description: e instanceof Error ? e.message : String(e) });
-    });
+    syncEngine.enqueue('UPSERT_ITEM', item);
   }, []);
   const removeItem = useCallback((id: string) => {
     setItems(prev => prev.filter(i => i.id !== id));
-    deleteMenuItem(id).catch((e: unknown) => {
-      toast.error('Supabase: failed to delete menu item', { description: e instanceof Error ? e.message : String(e) });
-    });
+    syncEngine.enqueue('DELETE_ITEM', { id });
   }, []);
   const addCategory = useCallback((cat: Category) => {
     setCategories(prev => [...prev, cat]);
-    upsertCategory(cat).catch((e: unknown) => {
-      toast.error('Supabase: failed to save category', { description: e instanceof Error ? e.message : String(e) });
-    });
+    syncEngine.enqueue('UPSERT_CATEGORY', cat);
   }, []);
   const updateCategory = useCallback((cat: Category) => {
     setCategories(prev => prev.map(c => c.id === cat.id ? cat : c));
-    upsertCategory(cat).catch((e: unknown) => {
-      toast.error('Supabase: failed to update category', { description: e instanceof Error ? e.message : String(e) });
-    });
+    syncEngine.enqueue('UPSERT_CATEGORY', cat);
   }, []);
   const removeCategory = useCallback((id: string) => {
     setCategories(prev => prev.filter(c => c.id !== id));
-    deleteCategory(id).catch((e: unknown) => {
-      toast.error('Supabase: failed to delete category', { description: e instanceof Error ? e.message : String(e) });
-    });
+    syncEngine.enqueue('DELETE_CATEGORY', { id });
   }, []);
   const updateOrder = useCallback((order: Order) => {
     setOrders((prev) => prev.map((o) => (o.id === order.id ? order : o)));
-    updateOrderStatus(order.id, order.status).catch((e: unknown) => {
-      toast.error('Supabase: failed to update order status', {
-        description: e instanceof Error ? e.message : String(e),
-      });
-      // Re-sync from Supabase to avoid stale optimistic state after write failure.
-      fetchOrders()
-        .then((fresh) => setOrders(fresh))
-        .catch(() => undefined);
-    });
+    syncEngine.enqueue('UPDATE_ORDER_STATUS', { id: order.id, status: order.status });
   }, []);
   const addOrder = useCallback((order: Omit<Order, 'orderNumber'>) => {
-    // Optimistic local update (orderNumber will be fixed by Supabase order_number)
     const localId = `ord-${Date.now()}`;
     let optimisticOrderNumber = 1;
     setBrand((prev) => {
       optimisticOrderNumber = prev.nextOrderNumber ?? 1;
       return { ...prev, nextOrderNumber: optimisticOrderNumber + 1 };
     });
-    setOrders((prevOrders) => [
-      { ...order, id: localId, orderNumber: optimisticOrderNumber } as Order,
-      ...prevOrders,
-    ]);
-    createOrder(order)
-      .then((saved) => {
-        setOrders((prev) => prev.map((o) => (o.id === localId ? saved : o)));
-      })
-      .catch((e: unknown) => {
-        toast.error('Supabase: failed to create order', { description: e instanceof Error ? e.message : String(e) });
-      });
+    const newOrder = { ...order, id: localId, orderNumber: optimisticOrderNumber } as Order;
+    setOrders((prevOrders) => [newOrder, ...prevOrders]);
+    syncEngine.enqueue('CREATE_ORDER', order);
   }, []);
   const updateBrand = useCallback((b: BrandSettings) => {
     setBrand(b);
-    upsertBrandSettings(b).catch((e: unknown) => {
-      toast.error('Supabase: failed to update branding', { description: e instanceof Error ? e.message : String(e) });
-    });
+    syncEngine.enqueue('UPSERT_BRAND', b);
   }, []);
 
   const callWaiter = useCallback((tableNumber: number) => {
@@ -350,13 +479,14 @@ export function MenuProvider({ children }: { children: ReactNode }) {
 
   return (
     <MenuContext.Provider value={{
-      items, categories, orders, brand, waiterCalls,
+      items, categories, orders: mergedOrders, brand, waiterCalls,
       addItem, updateItem, removeItem,
       addCategory, updateCategory, removeCategory,
       updateOrder, addOrder, updateBrand,
       callWaiter, acknowledgeCall, clearCall,
       searchQuery, setSearchQuery,
       posViewMode, setPosViewMode,
+      syncStatus, pendingChangesCount,
     }}>
       {children}
     </MenuContext.Provider>

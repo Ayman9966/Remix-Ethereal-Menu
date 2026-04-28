@@ -5,6 +5,7 @@ const STORAGE_KEYS = {
   brand: 'savor_brand',
   pendingChanges: 'savor_pending_changes',
   waiterCalls: 'savor_waiter_calls',
+  syncQueue: 'savor_sync_queue',
 } as const;
 
 type WithCreatedAt = { createdAt: string | Date };

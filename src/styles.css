@@ -154,6 +154,14 @@
     background: oklch(0.24 0.015 200 / 85%);
     backdrop-filter: blur(20px);
   }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
 .printable-invoice {

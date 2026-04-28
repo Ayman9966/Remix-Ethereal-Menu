@@ -28,10 +28,11 @@ export interface Order {
   id: string;
   orderNumber: number;
   items: OrderItem[];
-  status: 'pending' | 'preparing' | 'ready' | 'served';
+  status: 'pending' | 'preparing' | 'ready' | 'served' | 'ready_to_pickup' | 'picked';
   orderType: 'dine-in' | 'takeaway';
   tableNumber?: number;
   createdAt: Date;
+  updatedAt: Date;
   total: number;
 }
 
@@ -121,6 +122,7 @@ export const sampleOrders: Order[] = [
     tableNumber: 3,
     status: 'preparing',
     createdAt: new Date(Date.now() - 12 * 60000),
+    updatedAt: new Date(Date.now() - 12 * 60000),
     total: 74.50,
     items: [
       { menuItem: defaultMenuItems[0], quantity: 1 },
@@ -136,6 +138,7 @@ export const sampleOrders: Order[] = [
     tableNumber: 7,
     status: 'pending',
     createdAt: new Date(Date.now() - 3 * 60000),
+    updatedAt: new Date(Date.now() - 3 * 60000),
     total: 82.00,
     items: [
       { menuItem: defaultMenuItems[1], quantity: 1 },
@@ -150,6 +153,7 @@ export const sampleOrders: Order[] = [
     tableNumber: 12,
     status: 'ready',
     createdAt: new Date(Date.now() - 25 * 60000),
+    updatedAt: new Date(Date.now() - 25 * 60000),
     total: 106.00,
     items: [
       { menuItem: defaultMenuItems[2], quantity: 1 },
