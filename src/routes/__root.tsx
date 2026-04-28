@@ -31,7 +31,7 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Savor — Digital Menu SaaS" },
-      { name: "description", content: "Modern digital menu, POS, and kitchen management system for restaurants" },
+      { name: "description", content: "Modern digital menu, terminal, and kitchen management system for restaurants" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

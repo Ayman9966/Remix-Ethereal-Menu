@@ -423,6 +423,47 @@ function BrandingTab() {
           </div>
         </div>
         <div className="sm:col-span-2">
+          <div className="flex items-center justify-between rounded-2xl bg-surface-low p-4">
+            <div className="flex items-center gap-3">
+              <Printer className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-sm font-medium text-foreground">Auto Print Invoice</p>
+                <p className="text-xs text-muted-foreground">Automatically print invoice when order is sent to kitchen</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setForm({ ...form, autoPrintInvoice: !form.autoPrintInvoice })}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
+                form.autoPrintInvoice ? 'bg-primary' : 'bg-muted-foreground/30'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                form.autoPrintInvoice ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
+          </div>
+        </div>
+        {form.autoPrintInvoice && (
+          <div className="sm:col-span-2">
+            <div className="rounded-2xl bg-surface-low p-4">
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Invoice Size</label>
+              <div className="flex gap-2 rounded-xl bg-card p-1">
+                {(['58mm', '80mm'] as const).map(size => (
+                  <button
+                    key={size}
+                    onClick={() => setForm({ ...form, invoiceSize: size })}
+                    className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                      form.invoiceSize === size ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+        <div className="sm:col-span-2">
           <div className="rounded-2xl bg-surface-low p-4">
             <div className="mb-3 flex items-center gap-3">
               <Maximize className="h-5 w-5 text-primary" />

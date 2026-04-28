@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useMenu } from '@/hooks/use-menu-context';
 
 const navItems = [
-  { to: '/pos', label: 'POS', icon: LayoutGrid },
+  { to: '/pos', label: 'Terminal', icon: LayoutGrid },
   { to: '/kitchen', label: 'Kitchen', icon: ChefHat },
   { to: '/menu', label: 'Digital Menu', icon: UtensilsCrossed },
   { to: '/admin', label: 'Admin', icon: Settings },
@@ -96,7 +96,7 @@ export function AppHeader() {
                     }`}
                   >
                     <Icon className="h-4 w-4" />
-                    POS
+                    Terminal
                   </button>
                   <button
                     onClick={() => setPosViewMode('history')}

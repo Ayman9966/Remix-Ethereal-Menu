@@ -39,6 +39,8 @@ type DbBrandSettings = {
   board_show_price?: boolean | null;
   board_show_description?: boolean | null;
   board_show_prep_time?: boolean | null;
+  auto_print_invoice?: boolean | null;
+  invoice_size?: '58mm' | '80mm' | null;
 };
 
 type DbOrder = {
@@ -115,6 +117,8 @@ function mapBrand(row: DbBrandSettings, nextOrderNumber: number): BrandSettings 
     boardShowPrice: row.board_show_price ?? defaultBrand.boardShowPrice,
     boardShowDescription: row.board_show_description ?? defaultBrand.boardShowDescription,
     boardShowPrepTime: row.board_show_prep_time ?? defaultBrand.boardShowPrepTime,
+    autoPrintInvoice: row.auto_print_invoice ?? defaultBrand.autoPrintInvoice,
+    invoiceSize: row.invoice_size ?? defaultBrand.invoiceSize,
     nextOrderNumber,
   };
 }
@@ -162,7 +166,7 @@ export async function fetchBrandSettings(): Promise<BrandSettings> {
   const { data: brandRows, error: brandErr } = await supabase
     .from('brand_settings')
     .select(
-      'restaurant_name,tagline,accent_color,logo_url,hero_image_url,online_ordering_enabled,show_prep_time,menu_scale,currency,total_tables,ordering_mode,board_background_color,board_cycle_seconds,board_columns,board_show_photos,board_show_price,board_show_description,board_show_prep_time',
+      'restaurant_name,tagline,accent_color,logo_url,hero_image_url,online_ordering_enabled,show_prep_time,menu_scale,currency,total_tables,ordering_mode,board_background_color,board_cycle_seconds,board_columns,board_show_photos,board_show_price,board_show_description,board_show_prep_time,auto_print_invoice,invoice_size',
     )
     .limit(1);
   let brandRow: DbBrandSettings | null = (brandRows?.[0] as DbBrandSettings) ?? null;
@@ -400,6 +404,8 @@ export async function upsertBrandSettings(brand: BrandSettings): Promise<void> {
     board_show_price: brand.boardShowPrice,
     board_show_description: brand.boardShowDescription,
     board_show_prep_time: brand.boardShowPrepTime,
+    auto_print_invoice: brand.autoPrintInvoice,
+    invoice_size: brand.invoiceSize,
   };
   const legacyRow = {
     restaurant_name: brand.restaurantName,

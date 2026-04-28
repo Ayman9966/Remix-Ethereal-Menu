@@ -69,6 +69,8 @@ export interface BrandSettings {
   boardShowDescription: boolean;
   boardShowPrepTime: boolean;
   nextOrderNumber: number;
+  autoPrintInvoice: boolean;
+  invoiceSize: '58mm' | '80mm';
 }
 
 export const defaultBrand: BrandSettings = {
@@ -89,6 +91,8 @@ export const defaultBrand: BrandSettings = {
   boardShowDescription: true,
   boardShowPrepTime: true,
   nextOrderNumber: 1,
+  autoPrintInvoice: false,
+  invoiceSize: '80mm',
 };
 
 export const defaultCategories: Category[] = [

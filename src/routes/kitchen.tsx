@@ -2,8 +2,9 @@ import { createFileRoute } from '@tanstack/react-router';
 import { AppHeader } from '@/components/AppHeader';
 import { useMenu } from '@/hooks/use-menu-context';
 import { Button } from '@/components/ui/button';
-import { Clock, CheckCircle, ChefHat, Bell, Package } from 'lucide-react';
+import { Clock, CheckCircle, ChefHat, Bell, Package, AlertCircle } from 'lucide-react';
 import type { Order } from '@/lib/menu-data';
+import { useState, useEffect } from 'react';
 
 export const Route = createFileRoute('/kitchen')({
   head: () => ({
@@ -17,8 +18,18 @@ export const Route = createFileRoute('/kitchen')({
 
 function KitchenPage() {
   const { orders, updateOrder } = useMenu();
+  const [, setTick] = useState(0);
 
-  const activeOrders = orders.filter(o => o.status !== 'served' && o.status !== 'picked');
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTick(t => t + 1);
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const activeOrders = [...orders]
+    .filter(o => o.status !== 'served' && o.status !== 'picked')
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   const pendingOrders = activeOrders.filter(o => o.status === 'pending');
   const preparingOrders = activeOrders.filter(o => o.status === 'preparing');
   const readyOrders = activeOrders.filter(o => o.status === 'ready' || o.status === 'ready_to_pickup');
@@ -49,10 +60,16 @@ function KitchenPage() {
     return null;
   };
 
+  const getElapsedMinutes = (date: Date) => {
+    return Math.floor((Date.now() - new Date(date).getTime()) / 60000);
+  };
+
   const getElapsed = (date: Date) => {
-    const mins = Math.floor((Date.now() - new Date(date).getTime()) / 60000);
+    const mins = getElapsedMinutes(date);
     return mins < 1 ? 'Just now' : `${mins}m ago`;
   };
+
+  const LATE_THRESHOLD_MINUTES = 10;
 
   return (
     <div className="min-h-screen bg-background">
@@ -87,12 +104,19 @@ function KitchenPage() {
                   {col.orders.map(order => {
                     const config = statusConfig[order.status];
                     const next = nextStatus(order);
+                    const elapsedMins = getElapsedMinutes(order.createdAt);
+                    const isLate = elapsedMins >= LATE_THRESHOLD_MINUTES && (order.status === 'pending' || order.status === 'preparing');
                     const Icon = config?.icon || CheckCircle;
+                    
                     return (
                       <div
                         key={order.id}
-                        className={`rounded-2xl bg-card p-6 shadow-ambient-sm transition-all duration-300 ${
-                          order.status === 'pending' ? 'ring-2 ring-warning/30 animate-pulse-subtle' : ''
+                        className={`rounded-2xl bg-card p-6 shadow-ambient-sm transition-all duration-300 border-2 ${
+                          isLate 
+                            ? 'border-red-500 bg-red-50/10' 
+                            : order.status === 'pending' 
+                              ? 'border-warning/30 animate-pulse-subtle' 
+                              : 'border-transparent'
                         }`}
                       >
                         <div className="mb-4 flex items-center justify-between">
@@ -101,6 +125,12 @@ function KitchenPage() {
                             <span className="text-sm text-muted-foreground">
                               {order.orderType === 'takeaway' ? '📦 Takeaway' : `Table ${order.tableNumber}`}
                             </span>
+                            {isLate && (
+                              <span className="flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-500">
+                                <AlertCircle className="h-3 w-3" />
+                                LATE
+                              </span>
+                            )}
                           </div>
                           <span className="text-xs text-muted-foreground">{getElapsed(order.createdAt)}</span>
                         </div>

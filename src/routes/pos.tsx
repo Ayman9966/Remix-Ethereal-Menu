@@ -24,8 +24,8 @@ declare global {
 export const Route = createFileRoute('/pos')({
   head: () => ({
     meta: [
-      { title: 'POS — Savor' },
-      { name: 'description', content: 'Point of sale terminal for order management' },
+      { title: 'Terminal — Savor' },
+      { name: 'description', content: 'Order management terminal' },
     ],
   }),
   component: POSPage,
@@ -109,16 +109,33 @@ function POSPage() {
 
   const sendOrder = () => {
     if (cart.length === 0) return;
-    addOrder({
+    const orderData = {
       id: `ord-${Date.now()}`,
       items: cart,
-      status: 'pending',
+      status: 'pending' as const,
       orderType,
       tableNumber: orderType === 'dine-in' ? tableNumber : undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
       total,
-    });
+    };
+
+    addOrder(orderData);
+
+    if (brand.autoPrintInvoice) {
+      const optimisticOrderNumber = brand.nextOrderNumber;
+      const printableOrder: Order = {
+        ...orderData,
+        id: `temp-${Date.now()}`,
+        orderNumber: optimisticOrderNumber,
+      };
+      setSelectedOrder(printableOrder);
+      setTimeout(() => {
+        window.print();
+        setSelectedOrder(null);
+      }, 500);
+    }
+
     setCart([]);
     setOrderSent(true);
     setTimeout(() => setOrderSent(false), 2000);
@@ -341,11 +358,11 @@ function POSPage() {
 
       {/* Hidden printable invoice */}
       {selectedOrder && (
-        <div className="printable-invoice" aria-hidden="true">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold uppercase tracking-tight">{brand.restaurantName}</h1>
-            <p className="text-sm text-gray-500 mt-1">{brand.tagline}</p>
-            <div className="mt-4 border-y border-gray-200 py-3">
+        <div className={`printable-invoice ${brand.invoiceSize === '58mm' ? 'invoice-58mm' : 'invoice-80mm'}`} aria-hidden="true">
+          <div className="text-center mb-4">
+            <h1 className="text-xl font-bold uppercase tracking-tight">{brand.restaurantName}</h1>
+            <p className="text-[10px] text-gray-500 mt-1">{brand.tagline}</p>
+            <div className="mt-2 border-y border-dashed border-gray-300 py-2">
               <div className="flex justify-between text-sm">
                 <span>Order No:</span>
                 <span className="font-bold">#{selectedOrder.orderNumber}</span>
