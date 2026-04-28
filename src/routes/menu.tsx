@@ -3,6 +3,7 @@ import { useMenu } from '@/hooks/use-menu-context';
 import { Search, Clock, UtensilsCrossed, Plus, Minus, ShoppingCart, X, Send, Check, Package, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import type { MenuItem, OrderItem, Order } from '@/lib/menu-data';
 
 export const Route = createFileRoute('/menu')({
@@ -55,6 +56,16 @@ function CustomerMenuPage() {
     const saved = localStorage.getItem('my_takeaway_orders');
     return saved ? JSON.parse(saved) : [];
   });
+  const [labelsExpanded, setLabelsExpanded] = useState(true);
+
+  // Auto-collapse labels after 3 seconds whenever they are expanded
+  useEffect(() => {
+    if (!labelsExpanded) return;
+    const timer = setTimeout(() => {
+      setLabelsExpanded(false);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [labelsExpanded]);
 
   // Save myOrderIds to localStorage
   useEffect(() => {
@@ -377,13 +388,26 @@ function CustomerMenuPage() {
       {myActiveOrders.length > 0 && !showCart && !showMyOrders && (
         <button
           onClick={() => setShowMyOrders(true)}
+          onMouseEnter={() => setLabelsExpanded(true)}
           className={`fixed z-40 flex items-center gap-2 rounded-2xl bg-success px-5 py-3.5 text-success-foreground shadow-ambient transition-all hover:shadow-lg active:scale-95 ${
             ordering && cartCount > 0 ? 'bottom-40 right-6' : 'bottom-24 right-6'
-          }`}
+          } ${!labelsExpanded ? 'w-[52px] px-0 justify-center' : ''}`}
           aria-label="My orders"
         >
           <UtensilsCrossed className="h-5 w-5" />
-          <span className="text-sm font-medium">My Orders ({myActiveOrders.length})</span>
+          <AnimatePresence mode="popLayout" initial={false}>
+            {labelsExpanded && (
+              <motion.span 
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className="overflow-hidden whitespace-nowrap text-sm font-medium"
+              >
+                My Orders ({myActiveOrders.length})
+              </motion.span>
+            )}
+          </AnimatePresence>
         </button>
       )}
 
@@ -463,13 +487,26 @@ function CustomerMenuPage() {
       {(brand.orderingMode === 'dine-in' || brand.orderingMode === 'both') && !showCart && (
         <button
           onClick={() => setShowCallWaiter(true)}
+          onMouseEnter={() => setLabelsExpanded(true)}
           className={`fixed z-40 flex items-center gap-2 rounded-2xl bg-card px-5 py-3.5 text-foreground shadow-ambient transition-all hover:shadow-lg active:scale-95 ${
             ordering && cartCount > 0 ? 'bottom-24 right-6' : 'bottom-6 right-6'
-          }`}
+          } ${!labelsExpanded ? 'w-[52px] px-0 justify-center' : ''}`}
           aria-label="Call waiter"
         >
           <Bell className="h-5 w-5 text-primary" />
-          <span className="text-sm font-medium">Call Waiter</span>
+          <AnimatePresence mode="popLayout" initial={false}>
+            {labelsExpanded && (
+              <motion.span 
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className="overflow-hidden whitespace-nowrap text-sm font-medium"
+              >
+                Call Waiter
+              </motion.span>
+            )}
+          </AnimatePresence>
         </button>
       )}
 
