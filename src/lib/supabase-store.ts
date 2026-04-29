@@ -1,5 +1,5 @@
 import type { BrandSettings, Category, MenuItem, Order, OrderItem } from '@/lib/menu-data';
-import { defaultBrand, defaultCategories, defaultMenuItems } from '@/lib/menu-data';
+import { defaultBrand, defaultCategories, defaultMenuItems, type WaiterCall } from '@/lib/menu-data';
 import { getSupabaseClient } from '@/lib/supabase';
 
 type DbCategory = {
@@ -82,6 +82,13 @@ type DbOrderItem = {
   notes: string | null;
   unit_price: number | string;
   menu_items: DbMenuItem & { categories?: DbCategory | null };
+};
+
+type DbWaiterCall = {
+  id: string;
+  table_number: number;
+  acknowledged: boolean;
+  created_at: string;
 };
 
 function toNumber(v: number | string): number {
@@ -183,6 +190,15 @@ function mapOrder(order: DbOrder, items: OrderItem[]): Order {
   };
 }
 
+function mapWaiterCall(row: DbWaiterCall): WaiterCall {
+  return {
+    id: row.id,
+    tableNumber: row.table_number,
+    acknowledged: row.acknowledged,
+    createdAt: new Date(row.created_at),
+  };
+}
+
 export async function fetchCategories(): Promise<Category[]> {
   const supabase = getSupabaseClient();
   if (!supabase) return defaultCategories;
@@ -280,11 +296,25 @@ export async function fetchOrders(limit = 200): Promise<Order[]> {
   return orders;
 }
 
+export async function fetchWaiterCalls(): Promise<WaiterCall[]> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('waiter_calls')
+    .select('id,table_number,acknowledged,created_at')
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []).map(mapWaiterCall);
+}
+
 export async function fetchBootstrapData(): Promise<{
   categories: Category[];
   items: MenuItem[];
   brand: BrandSettings;
   orders: Order[];
+  waiterCalls: WaiterCall[];
 }> {
   // Try to fetch from server-side cache first
   try {
@@ -323,9 +353,10 @@ export async function fetchBootstrapData(): Promise<{
         return mapOrder(dbOrder, mappedItems);
       });
       
+      const waiterCalls = (data.waiter_calls ?? []).map(mapWaiterCall);
       const brand = data.brand ? mapBrand(data.brand, (data.orders?.[0]?.order_number ?? 0) + 1) : defaultBrand;
 
-      return { categories, items, brand, orders };
+      return { categories, items, brand, orders, waiterCalls };
     }
   } catch (e) {
     console.warn("Failed to fetch from server cache, falling back to direct Supabase:", e);
@@ -338,14 +369,50 @@ export async function fetchBootstrapData(): Promise<{
       items: defaultMenuItems,
       brand: defaultBrand,
       orders: [],
+      waiterCalls: [],
     };
   }
 
   const [categories, items] = await Promise.all([fetchCategories(), fetchMenuItems()]);
 
-  const [brand, orders] = await Promise.all([fetchBrandSettings(), fetchOrders()]);
+  const [brand, orders, waiterCalls] = await Promise.all([
+    fetchBrandSettings(), 
+    fetchOrders(),
+    fetchWaiterCalls()
+  ]);
 
-  return { categories, items, brand, orders };
+  return { categories, items, brand, orders, waiterCalls };
+}
+
+export async function createWaiterCall(tableNumber: number): Promise<WaiterCall> {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error('Supabase not configured');
+  const { data, error } = await supabase
+    .from('waiter_calls')
+    .insert({ table_number: tableNumber })
+    .select()
+    .single();
+  if (error) throw error;
+  return mapWaiterCall(data);
+}
+
+export async function updateWaiterCall(id: string, updates: Partial<WaiterCall>): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('waiter_calls')
+    .update({
+      acknowledged: updates.acknowledged,
+    })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteWaiterCall(id: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  const { error } = await supabase.from('waiter_calls').delete().eq('id', id);
+  if (error) throw error;
 }
 
 export async function upsertCategory(cat: Category | Category[]): Promise<void> {

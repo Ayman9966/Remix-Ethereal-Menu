@@ -396,6 +396,27 @@ BEGIN
   ) THEN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.brand_settings;
   END IF;
+  
+  -- Waiter Calls Table
+  IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = 'waiter_calls') THEN
+    CREATE TABLE public.waiter_calls (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      table_number INT NOT NULL,
+      acknowledged BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    
+    ALTER TABLE public.waiter_calls ENABLE ROW LEVEL SECURITY;
+    
+    CREATE POLICY "Anyone can manage waiter calls" 
+      ON public.waiter_calls FOR ALL 
+      TO anon, authenticated 
+      USING (true) 
+      WITH CHECK (true);
+      
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.waiter_calls;
+  END IF;
 END
 $$;
 

@@ -29,11 +29,12 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const cache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
 
 async function fetchBootstrapData() {
-  const [categoriesRes, itemsRes, brandRes, ordersRes] = await Promise.all([
+  const [categoriesRes, itemsRes, brandRes, ordersRes, waiterCallsRes] = await Promise.all([
     supabase.from('categories').select('id,name,icon,sort_order').order('sort_order', { ascending: true }),
     supabase.from('menu_items').select('id,name,description,price,category_id,image_url,available,preparation_time').order('created_at', { ascending: true }),
     supabase.from('brand_settings').select('*').limit(1).single(),
-    supabase.from('orders').select('*, order_items(quantity, notes, unit_price, menu_items(*))').order('created_at', { ascending: false }).limit(50)
+    supabase.from('orders').select('*, order_items(quantity, notes, unit_price, menu_items(*))').order('created_at', { ascending: false }).limit(50),
+    supabase.from('waiter_calls').select('*').order('created_at', { ascending: false }).limit(50)
   ]);
 
   if (categoriesRes.error) throw categoriesRes.error;
@@ -46,8 +47,9 @@ async function fetchBootstrapData() {
     ...o,
     order_items: o.order_items || []
   }));
+  const waiter_calls = waiterCallsRes.data || [];
 
-  return { categories, items, brand, orders };
+  return { categories, items, brand, orders, waiter_calls };
 }
 
 export const app = express();

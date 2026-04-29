@@ -12,6 +12,10 @@ import {
   fetchCategories,
   fetchMenuItems,
   fetchOrders,
+  fetchWaiterCalls,
+  createWaiterCall,
+  updateWaiterCall,
+  deleteWaiterCall,
 } from '@/lib/supabase-store';
 import { syncEngine } from '@/lib/sync-engine';
 import { useOnlineStatus } from './use-online-status';
@@ -266,6 +270,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
         setItems(data.items);
         setBrand(data.brand);
         setOrders(data.orders);
+        setWaiterCalls(data.waiterCalls);
       })
       .catch(() => {
         // If Supabase isn't ready (schema not applied / RLS / network), keep local fallback
@@ -291,6 +296,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       setItems(data.items);
       setBrand(data.brand);
       setOrders(data.orders);
+      setWaiterCalls(data.waiterCalls);
     };
 
     const schedule = (key: string, fn: () => Promise<void>) => {
@@ -336,6 +342,21 @@ export function MenuProvider({ children }: { children: ReactNode }) {
         schedule('order_items', async () => {
           const next = await fetchOrders();
           if (!cancelled) setOrders(next);
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'waiter_calls' }, () => {
+        schedule('waiter_calls', async () => {
+          const next = await fetchWaiterCalls();
+          if (!cancelled) {
+            setWaiterCalls(prev => {
+              const newOnes = next.filter(c => !c.acknowledged && !prev.some(p => p.id === c.id));
+              if (newOnes.length > 0) {
+                playDing();
+                newOnes.forEach(c => toast.info(`🔔 Table ${c.tableNumber} needs a waiter`));
+              }
+              return next;
+            });
+          }
         });
       })
       .subscribe((status) => {
@@ -469,34 +490,40 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     const COOLDOWN_MS = 60_000;
     const now = Date.now();
     let result = { ok: true, cooldownSeconds: 0 };
-    setWaiterCalls(prev => {
-      const recent = prev.find(c =>
-        c.tableNumber === tableNumber &&
-        now - new Date(c.createdAt).getTime() < COOLDOWN_MS
-      );
-      if (recent) {
-        const remaining = Math.ceil((COOLDOWN_MS - (now - new Date(recent.createdAt).getTime())) / 1000);
-        result = { ok: false, cooldownSeconds: remaining };
-        return prev;
-      }
-      const call: WaiterCall = {
-        id: `call-${now}`,
-        tableNumber,
-        createdAt: new Date(),
-        acknowledged: false,
-      };
-      lastSeenIds.current.add(call.id);
-      return [...prev, call];
+    
+    // Check local cooldown first
+    const recent = waiterCalls.find(c =>
+      c.tableNumber === tableNumber &&
+      now - new Date(c.createdAt).getTime() < COOLDOWN_MS
+    );
+    
+    if (recent) {
+      const remaining = Math.ceil((COOLDOWN_MS - (now - new Date(recent.createdAt).getTime())) / 1000);
+      result = { ok: false, cooldownSeconds: remaining };
+      return result;
+    }
+    
+    // Create call in Supabase
+    createWaiterCall(tableNumber).catch(err => {
+      console.error('Failed to call waiter:', err);
+      toast.error('Failed to notify staff. Please try again.');
     });
+    
     return result;
-  }, []);
+  }, [waiterCalls]);
 
   const acknowledgeCall = useCallback((id: string) => {
     setWaiterCalls(prev => prev.map(c => c.id === id ? { ...c, acknowledged: true } : c));
+    updateWaiterCall(id, { acknowledged: true }).catch(err => {
+      console.error('Failed to acknowledge call:', err);
+    });
   }, []);
 
   const clearCall = useCallback((id: string) => {
     setWaiterCalls(prev => prev.filter(c => c.id !== id));
+    deleteWaiterCall(id).catch(err => {
+      console.error('Failed to delete call:', err);
+    });
   }, []);
 
   return (
