@@ -313,8 +313,6 @@ export async function fetchBootstrapData(): Promise<{
   categories: Category[];
   items: MenuItem[];
   brand: BrandSettings;
-  orders: Order[];
-  waiterCalls: WaiterCall[];
 }> {
   // Try to fetch from server-side cache first
   try {
@@ -322,12 +320,40 @@ export async function fetchBootstrapData(): Promise<{
     if (response.ok) {
       const data = await response.json();
       
-      // Map the DB rows to our local types (same as in existing fetchers)
-      // Note: we need to use the mapping functions defined in this file
-      
       const categories = (data.categories ?? []).map(mapCategory);
       const items = (data.items ?? []).map(mapMenuItem);
-      
+      const brand = data.brand ? mapBrand(data.brand, 0) : defaultBrand; // Should ideally fetch nextOrderNumber separately or handle it
+
+      return { categories, items, brand };
+    }
+  } catch (e) {
+    console.warn("Failed to fetch from server cache, falling back to direct Supabase:", e);
+  }
+
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    return {
+      categories: defaultCategories,
+      items: defaultMenuItems,
+      brand: defaultBrand,
+    };
+  }
+
+  const [categories, items] = await Promise.all([fetchCategories(), fetchMenuItems()]);
+  const brand = await fetchBrandSettings();
+
+  return { categories, items, brand };
+}
+
+export async function fetchAdditionalData(): Promise<{
+  orders: Order[];
+  waiterCalls: WaiterCall[];
+}> {
+  try {
+    const response = await fetch('/api/additional-data');
+    if (response.ok) {
+      const data = await response.json();
+
       const orders = (data.orders ?? []).map((o: any) => {
         const mappedItems = (o.order_items || []).map((oi: any) => ({
           quantity: oi.quantity,
@@ -354,34 +380,19 @@ export async function fetchBootstrapData(): Promise<{
       });
       
       const waiterCalls = (data.waiter_calls ?? []).map(mapWaiterCall);
-      const brand = data.brand ? mapBrand(data.brand, (data.orders?.[0]?.order_number ?? 0) + 1) : defaultBrand;
 
-      return { categories, items, brand, orders, waiterCalls };
+      return { orders, waiterCalls };
     }
   } catch (e) {
-    console.warn("Failed to fetch from server cache, falling back to direct Supabase:", e);
+    console.warn("Failed to fetch additional data from server cache, falling back to direct Supabase:", e);
   }
 
-  const supabase = getSupabaseClient();
-  if (!supabase) {
-    return {
-      categories: defaultCategories,
-      items: defaultMenuItems,
-      brand: defaultBrand,
-      orders: [],
-      waiterCalls: [],
-    };
-  }
-
-  const [categories, items] = await Promise.all([fetchCategories(), fetchMenuItems()]);
-
-  const [brand, orders, waiterCalls] = await Promise.all([
-    fetchBrandSettings(), 
+  const [orders, waiterCalls] = await Promise.all([
     fetchOrders(),
     fetchWaiterCalls()
   ]);
 
-  return { categories, items, brand, orders, waiterCalls };
+  return { orders, waiterCalls };
 }
 
 export async function createWaiterCall(tableNumber: number): Promise<WaiterCall> {

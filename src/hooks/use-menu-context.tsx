@@ -13,6 +13,7 @@ import {
   fetchMenuItems,
   fetchOrders,
   fetchWaiterCalls,
+  fetchAdditionalData,
   createWaiterCall,
   updateWaiterCall,
   deleteWaiterCall,
@@ -269,8 +270,13 @@ export function MenuProvider({ children }: { children: ReactNode }) {
         setCategories(data.categories);
         setItems(data.items);
         setBrand(data.brand);
-        setOrders(data.orders);
-        setWaiterCalls(data.waiterCalls);
+        
+        // Fetch remaining data in the background
+        fetchAdditionalData().then(additional => {
+          if (cancelled) return;
+          setOrders(additional.orders);
+          setWaiterCalls(additional.waiterCalls);
+        }).catch(console.error);
       })
       .catch(() => {
         // If Supabase isn't ready (schema not applied / RLS / network), keep local fallback
@@ -290,13 +296,16 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     const timers = new Map<string, number>();
 
     const refetchAll = async () => {
-      const data = await fetchBootstrapData();
+      const [essential, additional] = await Promise.all([
+        fetchBootstrapData(),
+        fetchAdditionalData()
+      ]);
       if (cancelled) return;
-      setCategories(data.categories);
-      setItems(data.items);
-      setBrand(data.brand);
-      setOrders(data.orders);
-      setWaiterCalls(data.waiterCalls);
+      setCategories(essential.categories);
+      setItems(essential.items);
+      setBrand(essential.brand);
+      setOrders(additional.orders);
+      setWaiterCalls(additional.waiterCalls);
     };
 
     const schedule = (key: string, fn: () => Promise<void>) => {

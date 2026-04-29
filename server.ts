@@ -28,13 +28,11 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // Cache settings: 5 minutes TTL, check period 1 minute
 const cache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
 
-async function fetchBootstrapData() {
-  const [categoriesRes, itemsRes, brandRes, ordersRes, waiterCallsRes] = await Promise.all([
+async function fetchEssentialData() {
+  const [categoriesRes, itemsRes, brandRes] = await Promise.all([
     supabase.from('categories').select('id,name,icon,sort_order').order('sort_order', { ascending: true }),
     supabase.from('menu_items').select('id,name,description,price,category_id,image_url,available,preparation_time').order('created_at', { ascending: true }),
     supabase.from('brand_settings').select('*').limit(1).single(),
-    supabase.from('orders').select('*, order_items(quantity, notes, unit_price, menu_items(*))').order('created_at', { ascending: false }).limit(50),
-    supabase.from('waiter_calls').select('*').order('created_at', { ascending: false }).limit(50)
   ]);
 
   if (categoriesRes.error) throw categoriesRes.error;
@@ -43,13 +41,23 @@ async function fetchBootstrapData() {
   const categories = categoriesRes.data || [];
   const items = itemsRes.data || [];
   const brand = brandRes.data || null;
+
+  return { categories, items, brand };
+}
+
+async function fetchAdditionalData() {
+  const [ordersRes, waiterCallsRes] = await Promise.all([
+    supabase.from('orders').select('*, order_items(quantity, notes, unit_price, menu_items(*))').order('created_at', { ascending: false }).limit(50),
+    supabase.from('waiter_calls').select('*').order('created_at', { ascending: false }).limit(50)
+  ]);
+
   const orders = (ordersRes.data || []).map((o: any) => ({
     ...o,
     order_items: o.order_items || []
   }));
   const waiter_calls = waiterCallsRes.data || [];
 
-  return { categories, items, brand, orders, waiter_calls };
+  return { orders, waiter_calls };
 }
 
 export const app = express();
@@ -63,24 +71,42 @@ async function startServer() {
   // API Routes
   app.get("/api/bootstrap", async (req, res) => {
     try {
-      const cachedData = cache.get("bootstrap");
-      if (cachedData) {
-        return res.json(cachedData);
+      const cachedEssential = cache.get("essential");
+      if (cachedEssential) {
+        return res.json(cachedEssential);
       }
 
-      console.log("Fetching bootstrap data from Supabase...");
-      const data = await fetchBootstrapData();
-      cache.set("bootstrap", data);
+      console.log("Fetching essential bootstrap data from Supabase...");
+      const data = await fetchEssentialData();
+      cache.set("essential", data);
       res.json(data);
     } catch (error: any) {
-      console.error("Error fetching bootstrap data:", error);
+      console.error("Error fetching essential bootstrap data:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/additional-data", async (req, res) => {
+    try {
+      const cachedAdditional = cache.get("additional");
+      if (cachedAdditional) {
+        return res.json(cachedAdditional);
+      }
+
+      console.log("Fetching additional bootstrap data from Supabase...");
+      const data = await fetchAdditionalData();
+      cache.set("additional", data);
+      res.json(data);
+    } catch (error: any) {
+      console.error("Error fetching additional bootstrap data:", error);
       res.status(500).json({ error: error.message });
     }
   });
 
   // Manual cache invalidation
   app.post("/api/cache/invalidate", (req, res) => {
-    cache.del("bootstrap");
+    cache.del("essential");
+    cache.del("additional");
     res.json({ status: "ok", message: "Cache invalidated" });
   });
 
