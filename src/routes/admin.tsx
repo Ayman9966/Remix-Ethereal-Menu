@@ -39,6 +39,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 declare global {
   interface Window {
@@ -373,52 +379,55 @@ function MenuItemsTab() {
         <Button onClick={openNew}><Plus className="h-4 w-4" />Add Item</Button>
       </div>
 
-      {editing && (
-        <Card className="mb-6">
-          <CardContent className="grid gap-4 p-6 sm:grid-cols-2">
+            <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{isNew ? 'Add Menu Item' : 'Edit Menu Item'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Name</label>
-              <input value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
+              <input value={editing?.name} onChange={e => setEditing(prev => prev ? { ...prev, name: e.target.value } : null)} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Category</label>
-              <select value={editing.categoryId} onChange={e => setEditing({ ...editing, categoryId: e.target.value })} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary">
+              <select value={editing?.categoryId} onChange={e => setEditing(prev => prev ? { ...prev, categoryId: e.target.value } : null)} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary">
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div className="sm:col-span-2">
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Description</label>
-              <textarea value={editing.description} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={2} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary resize-none" />
+              <textarea value={editing?.description} onChange={e => setEditing(prev => prev ? { ...prev, description: e.target.value } : null)} rows={2} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary resize-none" />
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Price ($)</label>
-              <input type="number" step="0.01" value={editing.price} onChange={e => setEditing({ ...editing, price: parseFloat(e.target.value) || 0 })} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
+              <input type="number" step="0.01" value={editing?.price} onChange={e => setEditing(prev => prev ? { ...prev, price: parseFloat(e.target.value) || 0 } : null)} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Prep Time (min)</label>
-              <input type="number" value={editing.preparationTime} onChange={e => setEditing({ ...editing, preparationTime: parseInt(e.target.value) || 0 })} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
+              <input type="number" value={editing?.preparationTime} onChange={e => setEditing(prev => prev ? { ...prev, preparationTime: parseInt(e.target.value) || 0 } : null)} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
             </div>
             <div className="sm:col-span-2">
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Image URL (optional)</label>
               <div className="flex items-center gap-3">
                 <ImageIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <input value={editing.image ?? ''} onChange={e => setEditing({ ...editing, image: e.target.value || undefined })} placeholder="https://example.com/photo.jpg" className="flex-1 rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
-                {editing.image && <img src={editing.image} alt="" className="h-10 w-10 rounded-lg object-cover" />}
+                <input value={editing?.image ?? ''} onChange={e => setEditing(prev => prev ? { ...prev, image: e.target.value || undefined } : null)} placeholder="https://example.com/photo.jpg" className="flex-1 rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
+                {editing?.image && <img src={editing.image} alt="" className="h-10 w-10 rounded-lg object-cover" />}
               </div>
             </div>
             <div className="flex items-center gap-3 sm:col-span-2">
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={editing.available} onChange={e => setEditing({ ...editing, available: e.target.checked })} className="rounded" />
+                <input type="checkbox" checked={editing?.available ?? true} onChange={e => setEditing(prev => prev ? { ...prev, available: e.target.checked } : null)} className="rounded" />
                 Available
               </label>
             </div>
-            <div className="flex gap-2 sm:col-span-2">
-              <Button onClick={save}><Save className="h-4 w-4" />{isNew ? 'Add Item' : 'Save'}</Button>
-              <Button variant="ghost" onClick={() => { setEditing(null); setIsNew(false); }}><X className="h-4 w-4" />Cancel</Button>
+            <div className="flex gap-2 sm:col-span-2 justify-end pt-4">
+              <Button variant="ghost" onClick={() => { setEditing(null); setIsNew(false); }}>Cancel</Button>
+              <Button onClick={save}>{isNew ? 'Add Item' : 'Save'}</Button>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="space-y-2">
         {filteredItems.map(item => {
