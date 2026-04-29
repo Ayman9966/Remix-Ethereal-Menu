@@ -169,12 +169,13 @@ function POSPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
       <AppHeader />
-      <div className="mx-auto w-full max-w-7xl px-6 pt-6">
-        <WaiterCallsPanel />
-      </div>
-      <div className="flex h-[calc(100vh-4rem)]">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="w-full px-6 pt-4 shrink-0">
+          <WaiterCallsPanel />
+        </div>
+        <div className="flex-1 flex min-h-0 overflow-hidden">
         {posViewMode === 'history' ? (
           <div className="flex-1 overflow-auto p-6">
              <h2 className="font-display text-2xl font-bold mb-6">Order History</h2>
@@ -268,15 +269,15 @@ function POSPage() {
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShoppingCart className="h-5 w-5 text-primary" />
-              <h2 className="font-display text-lg font-semibold">Order</h2>
+              <h2 className="font-display text-base font-semibold">Order</h2>
             </div>
             {orderType === 'dine-in' && canDineIn && (
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Table</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">T:</span>
                 <select
                   value={tableNumber}
                   onChange={e => setTableNumber(Number(e.target.value))}
-                  className="rounded-lg bg-surface-low px-2 py-1 text-xs font-bold text-foreground outline-none border border-border/10"
+                  className="rounded-lg bg-surface-low px-2 py-1 text-xs font-bold text-foreground outline-none border border-border/10 hover:bg-muted-foreground/10 transition-colors"
                 >
                   {Array.from({ length: brand.totalTables ?? 20 }, (_, i) => (
                     <option key={i + 1} value={i + 1}>{i + 1}</option>
@@ -351,16 +352,6 @@ function POSPage() {
           </div>
 
           <div className="mt-4 pt-4 border-t border-border/10">
-            {shouldApplyTax || shouldApplyServiceCharge || shouldApplyAdditionalFee ? (
-              <div 
-                className="flex items-center gap-2 mb-3 cursor-pointer group w-fit"
-                onClick={() => setShowSummary(!showSummary)}
-              >
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Payment Summary</span>
-                {showSummary ? <ChevronUp className="h-3 w-3 text-muted-foreground group-hover:text-primary" /> : <ChevronDown className="h-3 w-3 text-muted-foreground group-hover:text-primary" />}
-              </div>
-            ) : null}
-
             <AnimatePresence>
               {showSummary && (
                 <motion.div
@@ -404,8 +395,14 @@ function POSPage() {
               )}
             </AnimatePresence>
 
-            <div className="flex items-center justify-between pt-3 mt-1 border-t border-dashed border-border/40">
-              <span className="text-base font-bold text-foreground">Total</span>
+            <div 
+              className="flex items-center justify-between pt-3 mt-1 border-t border-dashed border-border/40 cursor-pointer group"
+              onClick={() => setShowSummary(!showSummary)}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-base font-bold text-foreground transition-colors group-hover:text-primary">Total</span>
+                {showSummary ? <ChevronUp className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-all" /> : <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-all" />}
+              </div>
               <span className="font-display text-2xl font-bold text-primary">{brand.currency}{total.toFixed(2)}</span>
             </div>
             <Button 
@@ -578,6 +575,7 @@ function POSPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

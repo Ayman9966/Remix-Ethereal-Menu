@@ -280,7 +280,7 @@ function CustomerMenuPage() {
           <div className="absolute inset-0 gradient-primary" />
         )}
         <div className="relative px-4 py-16 text-center">
-          <div className="mx-auto max-w-lg">
+          <div className="w-full">
             <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-foreground/10 backdrop-blur-sm">
               <UtensilsCrossed className="h-6 w-6 text-primary-foreground" />
             </div>
@@ -290,7 +290,7 @@ function CustomerMenuPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-3xl px-4 py-8">
+      <div className="w-full px-4 py-8">
         {/* Search */}
         <div className="relative mb-8">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -451,7 +451,7 @@ function CustomerMenuPage() {
       {showMyOrders && (
         <>
           <div className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm" onClick={() => setShowMyOrders(false)} />
-          <div className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-lg animate-in slide-in-from-bottom rounded-t-3xl bg-card p-6 shadow-ambient">
+          <div className="fixed bottom-5 left-5 right-5 z-50 mx-auto max-w-lg animate-in fade-in slide-in-from-bottom-8 rounded-3xl bg-card p-6 shadow-2xl border border-border/50">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="font-display text-lg font-semibold text-foreground">Order Status</h3>
               <button onClick={() => setShowMyOrders(false)} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground hover:bg-surface-low">
@@ -550,7 +550,7 @@ function CustomerMenuPage() {
       {showCallWaiter && (
         <>
           <div className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm" onClick={() => setShowCallWaiter(false)} />
-          <div className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-md animate-in slide-in-from-bottom rounded-t-3xl bg-card p-6 shadow-ambient">
+          <div className="fixed bottom-5 left-5 right-5 z-50 mx-auto max-w-lg animate-in fade-in slide-in-from-bottom-8 rounded-3xl bg-card p-6 shadow-2xl border border-border/50">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="font-display text-lg font-semibold text-foreground">Call a Waiter</h3>
               <button onClick={() => setShowCallWaiter(false)} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground hover:bg-surface-low">
@@ -629,7 +629,7 @@ function CustomerMenuPage() {
       {ordering && showCart && (
         <>
           <div className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm" onClick={() => setShowCart(false)} />
-          <div className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-lg animate-in slide-in-from-bottom rounded-t-3xl bg-card p-6 shadow-ambient">
+          <div className="fixed bottom-5 left-5 right-5 z-50 mx-auto max-w-lg animate-in fade-in slide-in-from-bottom-8 rounded-3xl bg-card p-6 shadow-2xl border border-border/50">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="font-display text-lg font-semibold text-foreground">Your Order</h3>
               <button onClick={() => setShowCart(false)} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground hover:bg-surface-low">

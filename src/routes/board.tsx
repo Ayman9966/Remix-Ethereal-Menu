@@ -51,7 +51,10 @@ function MenuBoardPage() {
     return categories.filter((c) => (byCat.get(c.id) ?? 0) > 0);
   }, [categories, items]);
 
-  const activeCategory = availableCategories[idx % Math.max(1, availableCategories.length)];
+  const totalStates = availableCategories.length;
+  const currentIdx = totalStates > 0 ? idx % totalStates : 0;
+  const activeCategory = totalStates > 0 ? availableCategories[currentIdx] : null;
+
   const activeItems = useMemo(() => {
     if (!activeCategory) return [];
     return items
@@ -71,24 +74,15 @@ function MenuBoardPage() {
   }, []);
 
   useEffect(() => {
-    if (availableCategories.length <= 1) return;
-    const t = window.setInterval(() => setIdx((n) => (n + 1) % availableCategories.length), cycle * 1000);
+    if (totalStates <= 1) return;
+    const t = window.setInterval(() => setIdx((n) => (n + 1) % totalStates), cycle * 1000);
     return () => window.clearInterval(t);
-  }, [availableCategories.length, cycle]);
+  }, [totalStates, cycle]);
 
-  const nextCategories = useMemo(() => {
-    if (availableCategories.length <= 1) return [];
-    const out = [];
-    for (let i = 1; i <= Math.min(4, availableCategories.length - 1); i++) {
-      out.push(availableCategories[(idx + i) % availableCategories.length]);
-    }
-    return out;
-  }, [availableCategories, idx]);
-
-  const activeCategoryPosition = availableCategories.length > 0 ? (idx % availableCategories.length) + 1 : 0;
+  const activeCategoryPosition = availableCategories.length > 0 ? currentIdx + 1 : 0;
 
   return (
-    <div className="min-h-screen text-foreground" style={{ backgroundColor: boardBackgroundColor }}>
+    <div className="h-screen flex flex-col text-foreground overflow-hidden" style={{ backgroundColor: boardBackgroundColor }}>
       <style>{`
         @keyframes boardSlide {
           from { opacity: 0; transform: translate3d(0, 24px, 0); filter: blur(6px); }
@@ -102,6 +96,10 @@ function MenuBoardPage() {
           from { transform: translateX(-100%); opacity: 0; }
           20% { opacity: .35; }
           to { transform: translateX(120%); opacity: 0; }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
         }
       `}</style>
 
@@ -132,63 +130,28 @@ function MenuBoardPage() {
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,rgba(6,7,11,.24)_36%,rgba(6,7,11,.62)_100%)]" />
       </div>
 
-      {/* Top bar (premium signage style) */}
-      <div className="border-b border-white/10 bg-black/30 px-10 py-6 backdrop-blur-xl">
-        <div className="flex items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-white/5">
-              <UtensilsCrossed className="h-7 w-7 text-white/90" />
-            </div>
-            <div>
-              <div className="font-display text-4xl font-black tracking-tight text-white">{brand.restaurantName}</div>
-              <div className="mt-0.5 flex items-center gap-2 text-sm text-white/65">
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>{brand.tagline}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-5">
-            <div className="hidden min-[1220px]:flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2">
-              {nextCategories.map((c) => (
-                <div key={c.id} className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-white/85">
-                  <span className="mr-1.5">{c.icon}</span>
-                  {c.name}
-                </div>
-              ))}
-            </div>
-            <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-2.5 text-right">
-              <div className="font-display text-3xl font-bold tabular-nums text-white">
-                {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </div>
-              <div className="flex items-center justify-end gap-1 text-xs uppercase tracking-wider text-white/60">
-                <Clock3 className="h-3.5 w-3.5" />
-                {now.toLocaleDateString([], { weekday: 'short', month: 'short', day: '2-digit' })}
-              </div>
-            </div>
-          </div>
-        </div>
-        {activeCategory && (
-          <div className="mt-5 h-1 overflow-hidden rounded-full bg-white/10">
+      {/* Category + items */}
+      <div className="flex-1 overflow-auto px-6 py-6 custom-scrollbar relative flex flex-col">
+        {totalStates > 0 && (
+          <div className="absolute top-0 left-0 right-0 h-1 z-50">
             <div
-              className="h-full rounded-full"
+              className="h-full shadow-lg transition-all duration-1000 ease-in-out"
               style={{
-                width: `${(activeCategoryPosition / Math.max(1, availableCategories.length)) * 100}%`,
+                width: `${(activeCategoryPosition / totalStates) * 100}%`,
                 background: `linear-gradient(90deg, ${brand.accentColor}, ${brand.accentColor}bb)`,
-                boxShadow: `0 0 28px ${brand.accentColor}88`,
+                boxShadow: `0 0 20px ${brand.accentColor}aa`,
               }}
             />
           </div>
         )}
-      </div>
 
-      {/* Category + items */}
-      <div className="px-10 pb-10 pt-8">
         {!activeCategory ? (
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-12 shadow-ambient-sm backdrop-blur-md">
-            <div className="font-display text-4xl font-black text-white">No menu items yet</div>
-            <div className="mt-2 text-xl text-white/65">
-              Add categories and items in the Admin panel.
+          <div className="flex-1 flex items-center justify-center">
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-12 shadow-ambient-sm backdrop-blur-md text-center max-w-lg">
+              <div className="font-display text-4xl font-black text-white">No menu items yet</div>
+              <div className="mt-2 text-xl text-white/65">
+                Add categories and items in the Admin panel to start the board.
+              </div>
             </div>
           </div>
         ) : (
@@ -197,114 +160,93 @@ function MenuBoardPage() {
             className={reduceMotion ? '' : 'will-change-transform'}
             style={reduceMotion ? undefined : { animation: 'boardSlide 650ms cubic-bezier(0.2, 0.8, 0.2, 1)' }}
           >
-            <div className="mb-8">
-              <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/25 p-6 backdrop-blur-md">
-                {!reduceMotion && (
-                  <div
-                    className="pointer-events-none absolute inset-y-0 w-1/3"
-                    style={{ animation: 'pulseScan 3.5s linear infinite' }}
-                  >
-                    <div className="h-full w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                  </div>
-                )}
-                <div className="relative z-10 flex items-end gap-5">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-white/15 bg-white/10 text-5xl">
+            <div className="mb-6">
+              <div className="flex items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-black/40 text-4xl shadow-inner backdrop-blur-sm">
                     {activeCategory.icon}
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-display text-6xl font-black leading-none tracking-tight text-white">
+                  <div>
+                    <div className="font-display text-5xl font-black leading-tight tracking-tight text-white uppercase italic">
                       {activeCategory.name}
                     </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-white/65">
-                      <span>Now serving</span>
-                      <span className="rounded-full bg-white/10 px-3 py-1">{activeItems.length} items</span>
-                      <span className="rounded-full bg-white/10 px-3 py-1">
-                        Rotation {activeCategoryPosition}/{Math.max(1, availableCategories.length)}
-                      </span>
+                    <div className="mt-1 flex items-center gap-3 text-xs text-white/50 font-bold uppercase tracking-widest">
+                      <span>Serving {activeItems.length} delicacies</span>
+                      <span className="h-1 w-1 rounded-full bg-white/20" />
+                      <span>Collection {activeCategoryPosition}/{Math.max(1, availableCategories.length)}</span>
                     </div>
                   </div>
                 </div>
               </div>
-
             </div>
 
             <div
-              className="grid gap-8"
+              className="grid gap-6 h-fit"
               style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
             >
               {chunked.map((col, cIdx) => (
-                <div key={cIdx} className="space-y-4">
+                <div key={cIdx} className="space-y-6">
                   {col.map((it) => (
                     <div
                       key={it.id}
-                      className="group relative overflow-hidden rounded-3xl border border-white/10 bg-black/25 shadow-ambient-sm"
+                      className="group relative overflow-hidden rounded-2xl border border-white/10 bg-black/40 shadow-2xl transition-all duration-300 hover:border-white/20"
                     >
                       {it.image && showPhotos ? (
-                        <img
-                          src={it.image}
-                          alt={it.name}
-                          className="h-56 w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                          decoding="async"
-                          loading="lazy"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
+                        <div className="relative aspect-[16/10] overflow-hidden">
+                          <img
+                            src={it.image}
+                            alt={it.name}
+                            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.1]"
+                            decoding="async"
+                            loading="lazy"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                        </div>
                       ) : (
                         <div
-                          className="h-56 w-full"
+                          className="aspect-[16/10] w-full"
                           style={{
                             background:
-                              `linear-gradient(135deg, ${brand.accentColor}55, ${brand.accentColor}22),` +
-                              'radial-gradient(circle at 20% 20%, rgba(255,255,255,.24), transparent 45%)',
+                              `linear-gradient(135deg, ${brand.accentColor}33, ${brand.accentColor}11),` +
+                              'radial-gradient(circle at 20% 20%, rgba(255,255,255,.1), transparent 45%)',
                           }}
                         />
                       )}
 
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
-                      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(0,0,0,.18),transparent_45%)]" />
-
-                      <div className="absolute inset-x-0 bottom-0 p-5">
-                        <div className="flex items-end gap-4">
+                      <div className="p-4 relative">
+                        <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
-                            <div className="truncate font-display text-3xl font-black tracking-tight text-white drop-shadow-md">
+                            <div className="truncate font-display text-2xl font-black tracking-tight text-white">
                               {it.name}
                             </div>
                             {showDescription && it.description && (
-                              <div className="mt-1.5 line-clamp-2 text-sm text-white/88">
+                              <div className="mt-1 line-clamp-2 text-xs text-white/60 leading-relaxed">
                                 {it.description}
                               </div>
                             )}
                           </div>
                           {showPrice && (
                             <div
-                              className="shrink-0 rounded-2xl border border-white/20 bg-black/45 px-3 py-1.5 font-display text-3xl font-black tabular-nums text-white backdrop-blur"
-                              style={{ boxShadow: `0 0 24px ${brand.accentColor}55` }}
+                              className="shrink-0 rounded-xl bg-white text-black px-3 py-1 font-display text-xl font-black tabular-nums shadow-xl"
                             >
                               {brand.currency}{it.price.toFixed(2)}
                             </div>
                           )}
                         </div>
                         {showPrepTime && (
-                          <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/40 px-3 py-1 text-xs text-white/90 backdrop-blur">
-                            <Clock3 className="h-3.5 w-3.5" />
-                            Prep {it.preparationTime} min
+                          <div className="mt-3 flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white/40">
+                              <Clock3 className="h-3 w-3" />
+                              <span>Ready in {it.preparationTime}m</span>
+                            </div>
+                            {!it.image && (
+                              <div className="bg-primary/20 text-primary text-[9px] font-black uppercase px-2 py-0.5 rounded border border-primary/30 tracking-tighter">
+                                Recommendation
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-
-                      <div
-                        className="pointer-events-none absolute inset-x-0 top-0 h-16"
-                        style={{
-                          background: `linear-gradient(180deg, ${brand.accentColor}35, transparent)`,
-                        }}
-                      />
-                      <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10" />
-                      {!it.image && (
-                        <div className="pointer-events-none absolute right-4 top-4 rounded-full border border-white/20 bg-black/30 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white/85">
-                          Chef Special
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>

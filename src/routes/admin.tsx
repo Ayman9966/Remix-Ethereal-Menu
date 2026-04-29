@@ -71,9 +71,9 @@ function AdminPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
       <AppHeader />
-      <div className="mx-auto max-w-5xl p-6">
+      <div className="flex-1 overflow-auto w-full p-6">
         <h1 className="font-display text-2xl font-bold text-foreground">Admin Panel</h1>
         <p className="mt-1 text-sm text-muted-foreground">Manage your restaurant's menu, categories, and branding</p>
 

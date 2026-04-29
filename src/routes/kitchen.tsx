@@ -73,9 +73,9 @@ function KitchenPage() {
   const LATE_THRESHOLD_MINUTES = 10;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
       <AppHeader />
-      <div className="mx-auto max-w-7xl p-6">
+      <div className="flex-1 overflow-auto w-full p-6">
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold text-foreground">Kitchen Display</h1>
