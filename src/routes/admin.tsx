@@ -3,7 +3,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { useMenu } from '@/hooks/use-menu-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, UtensilsCrossed, Tag, Palette, Save, X, ImageIcon, ShoppingCart, Clock, Maximize, Hash, Package, Bell, Check, QrCode, Download, Printer, ExternalLink, Search, GripVertical, Settings, RotateCw } from 'lucide-react';
+import { Plus, Pencil, Trash2, UtensilsCrossed, Tag, Palette, Save, X, ImageIcon, ShoppingCart, Clock, Maximize, Hash, Package, Bell, Check, QrCode, Download, Printer, ExternalLink, Search, GripVertical, Settings, RotateCw, ReceiptText, Percent, Coins } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
@@ -479,11 +479,30 @@ function MenuItemsTab() {
   );
 }
 
+const FOOD_ICONS = [
+  '🥗', '🍽️', '🍝', '🍰', '🥤', '🥟', '🥩', '🍔', '🍕', '🍜', '🍣', '🍦', 
+  '☕', '🍺', '🥪', '🌮', '🥙', '🍤', '🍛', '🍲', '🥯', '🥐', '🍳', '🥞', 
+  '🍖', '🍗', '🥓', '🍟', '🍘', '🍱', '🍵', '🍶', '🍷', '🍸', '🍹', '🥘',
+  '🥨', '🥖', '🧀', '🥡', '🍚', '🥣'
+];
+
 function CategoriesTab() {
   const { categories, addCategory, updateCategory, removeCategory, reorderCategories } = useMenu();
   const [editing, setEditing] = useState<Category | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [showIconPicker, setShowIconPicker] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
+        setShowIconPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -495,6 +514,7 @@ function CategoriesTab() {
   const openNew = () => {
     setEditing({ id: isSupabaseConfigured() ? crypto.randomUUID() : `cat-${Date.now()}`, name: '', icon: '📋', order: categories.length + 1 });
     setIsNew(true);
+    setShowIconPicker(false);
   };
 
   const save = () => {
@@ -508,6 +528,7 @@ function CategoriesTab() {
     }
     setEditing(null);
     setIsNew(false);
+    setShowIconPicker(false);
   };
 
   const sortedCategories = useMemo(() => {
@@ -569,11 +590,38 @@ function CategoriesTab() {
           <CardContent className="flex gap-4 p-6 items-end">
             <div className="flex-1">
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Name</label>
-              <input value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
+              <input value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} placeholder="Category name" className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
             </div>
-            <div className="w-24">
+            <div className="relative" ref={pickerRef}>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Icon</label>
-              <input value={editing.icon} onChange={e => setEditing({ ...editing, icon: e.target.value })} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
+              <button 
+                type="button"
+                onClick={() => setShowIconPicker(!showIconPicker)}
+                className="flex h-[42px] min-w-[50px] items-center justify-center rounded-xl bg-surface-low text-xl hover:bg-muted transition-colors border border-border/10"
+              >
+                {editing.icon}
+              </button>
+              
+              {showIconPicker && (
+                <div className="absolute top-full right-0 z-50 mt-2 p-2 rounded-2xl bg-card border border-border shadow-ambient-lg min-w-[280px]">
+                  <p className="mb-2 px-2 text-[10px] uppercase font-bold text-muted-foreground tracking-wider font-sans">Choose an icon</p>
+                  <div className="grid grid-cols-6 gap-1 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
+                    {FOOD_ICONS.map(icon => (
+                      <button
+                        key={icon}
+                        type="button"
+                        onClick={() => {
+                          setEditing({ ...editing, icon });
+                          setShowIconPicker(false);
+                        }}
+                        className={`flex aspect-square items-center justify-center rounded-lg text-lg hover:bg-primary/10 transition-colors ${editing.icon === icon ? 'bg-primary/20 ring-1 ring-primary' : ''}`}
+                      >
+                        {icon}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <Button onClick={save}><Save className="h-4 w-4" />{isNew ? 'Add' : 'Save'}</Button>
             <Button variant="ghost" onClick={() => { setEditing(null); setIsNew(false); }}><X className="h-4 w-4" /></Button>
@@ -979,6 +1027,179 @@ function BrandingTab() {
             </div>
           </div>
         </div>
+        <div className="sm:col-span-2">
+          <div className="rounded-2xl border border-border/40 bg-surface-low p-6">
+            <div className="mb-6 flex items-center gap-3">
+              <ReceiptText className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-sm font-bold text-foreground uppercase tracking-wider">Tax, Service & Fees</p>
+                <p className="text-xs text-muted-foreground">Manage taxes, service charges, and additional order fees</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* Tax Section */}
+              <div className="rounded-xl bg-card p-4 border border-border/20 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Percent className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold">Taxes</span>
+                  </div>
+                  <button
+                    onClick={() => setForm({ ...form, taxEnabled: !form.taxEnabled })}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
+                      form.taxEnabled ? 'bg-primary' : 'bg-muted-foreground/30'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                      form.taxEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+                {form.taxEnabled && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="flex rounded-lg bg-surface-low p-1">
+                      {(['percentage', 'fixed'] as const).map(type => (
+                        <button
+                          key={type}
+                          onClick={() => setForm({ ...form, taxType: type })}
+                          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                            form.taxType === type ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
+                          }`}
+                        >
+                          {type === 'percentage' ? '%' : 'Fixed'}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={form.taxRate}
+                        onChange={e => setForm({ ...form, taxRate: parseFloat(e.target.value) || 0 })}
+                        className="w-full rounded-lg bg-surface-low px-4 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="Rate"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground uppercase">
+                        {form.taxType === 'percentage' ? '%' : form.currency}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Service Charge Section */}
+              <div className="rounded-xl bg-card p-4 border border-border/20 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Coins className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold">Service Charge</span>
+                  </div>
+                  <button
+                    onClick={() => setForm({ ...form, serviceChargeEnabled: !form.serviceChargeEnabled })}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
+                      form.serviceChargeEnabled ? 'bg-primary' : 'bg-muted-foreground/30'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                      form.serviceChargeEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+                {form.serviceChargeEnabled && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="flex rounded-lg bg-surface-low p-1">
+                      {(['percentage', 'fixed'] as const).map(type => (
+                        <button
+                          key={type}
+                          onClick={() => setForm({ ...form, serviceChargeType: type })}
+                          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                            form.serviceChargeType === type ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
+                          }`}
+                        >
+                          {type === 'percentage' ? '%' : 'Fixed'}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={form.serviceChargeRate}
+                        onChange={e => setForm({ ...form, serviceChargeRate: parseFloat(e.target.value) || 0 })}
+                        className="w-full rounded-lg bg-surface-low px-4 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="Rate"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground uppercase">
+                        {form.serviceChargeType === 'percentage' ? '%' : form.currency}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Additional Fees Section */}
+              <div className="rounded-xl bg-card p-4 border border-border/20 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Plus className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold">Additional Fee</span>
+                  </div>
+                  <button
+                    onClick={() => setForm({ ...form, additionalFeeEnabled: !form.additionalFeeEnabled })}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
+                      form.additionalFeeEnabled ? 'bg-primary' : 'bg-muted-foreground/30'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                      form.additionalFeeEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+                {form.additionalFeeEnabled && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <label className="mb-1 block text-[10px] uppercase font-bold text-muted-foreground">Fee Name</label>
+                      <input
+                        value={form.additionalFeeName}
+                        onChange={e => setForm({ ...form, additionalFeeName: e.target.value })}
+                        className="w-full rounded-lg bg-surface-low px-4 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="e.g. Eco Fee"
+                      />
+                    </div>
+                    <div className="flex rounded-lg bg-surface-low p-1">
+                      {(['percentage', 'fixed'] as const).map(type => (
+                        <button
+                          key={type}
+                          onClick={() => setForm({ ...form, additionalFeeType: type })}
+                          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                            form.additionalFeeType === type ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
+                          }`}
+                        >
+                          {type === 'percentage' ? '%' : 'Fixed'}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={form.additionalFeeAmount}
+                        onChange={e => setForm({ ...form, additionalFeeAmount: parseFloat(e.target.value) || 0 })}
+                        className="w-full rounded-lg bg-surface-low px-4 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="Amount"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground uppercase">
+                        {form.additionalFeeType === 'percentage' ? '%' : form.currency}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="flex items-end sm:col-span-2">
           <Button onClick={() => {
             updateBrand(form);

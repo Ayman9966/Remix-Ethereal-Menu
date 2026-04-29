@@ -3,8 +3,9 @@ import { AppHeader } from '@/components/AppHeader';
 import { useMenu } from '@/hooks/use-menu-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { X, Send, Package, Bell, Check, Printer, ShoppingCart, Plus, Minus } from 'lucide-react';
+import { X, Send, Package, Bell, Check, Printer, ShoppingCart, Plus, Minus, ChevronDown, ChevronUp } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import type { MenuItem, OrderItem, Order } from '@/lib/menu-data';
 import { toast } from 'sonner';
 import {
@@ -39,6 +40,7 @@ function POSPage() {
   const [orderType, setOrderType] = useState<'dine-in' | 'takeaway'>(defaultType);
   const [tableNumber, setTableNumber] = useState(1);
   const [orderSent, setOrderSent] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -101,7 +103,21 @@ function POSPage() {
 
   const removeFromCart = (id: string) => setCart(prev => prev.filter(c => c.menuItem.id !== id));
 
-  const total = cart.reduce((sum, c) => sum + c.menuItem.price * c.quantity, 0);
+  const subtotal = cart.reduce((sum, c) => sum + c.menuItem.price * c.quantity, 0);
+
+  const tax = brand.taxEnabled
+    ? (brand.taxType === 'percentage' ? (subtotal * (brand.taxRate / 100)) : brand.taxRate)
+    : 0;
+
+  const serviceCharge = brand.serviceChargeEnabled
+    ? (brand.serviceChargeType === 'percentage' ? (subtotal * (brand.serviceChargeRate / 100)) : brand.serviceChargeRate)
+    : 0;
+
+  const additionalFee = brand.additionalFeeEnabled
+    ? (brand.additionalFeeType === 'percentage' ? (subtotal * (brand.additionalFeeAmount / 100)) : brand.additionalFeeAmount)
+    : 0;
+
+  const total = subtotal + tax + serviceCharge + additionalFee;
 
   const canDineIn = brand.orderingMode === 'dine-in' || brand.orderingMode === 'both';
   const canTakeaway = brand.orderingMode === 'takeaway' || brand.orderingMode === 'both';
@@ -118,6 +134,10 @@ function POSPage() {
       createdAt: new Date(),
       updatedAt: new Date(),
       total,
+      subtotal,
+      taxAmount: tax,
+      serviceChargeAmount: serviceCharge,
+      additionalFeeAmount: additionalFee,
     };
 
     addOrder(orderData);
@@ -313,12 +333,65 @@ function POSPage() {
             )}
           </div>
 
-          <div className="mt-4 space-y-3 pt-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Total</span>
-              <span className="font-display text-2xl font-bold text-foreground">{brand.currency}{total.toFixed(2)}</span>
+          <div className="mt-4 pt-4 border-t border-border/10">
+            {brand.taxEnabled || brand.serviceChargeEnabled || brand.additionalFeeEnabled ? (
+              <div 
+                className="flex items-center gap-2 mb-3 cursor-pointer group w-fit"
+                onClick={() => setShowSummary(!showSummary)}
+              >
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Payment Summary</span>
+                {showSummary ? <ChevronUp className="h-3 w-3 text-muted-foreground group-hover:text-primary" /> : <ChevronDown className="h-3 w-3 text-muted-foreground group-hover:text-primary" />}
+              </div>
+            ) : null}
+
+            <AnimatePresence>
+              {showSummary && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden space-y-2 mb-4"
+                >
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="font-medium text-foreground">{brand.currency}{subtotal.toFixed(2)}</span>
+                  </div>
+
+                  {brand.taxEnabled && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-1.5">
+                        Tax {brand.taxType === 'percentage' && <span className="text-[10px] bg-muted px-1 rounded uppercase font-bold text-muted-foreground">{brand.taxRate}%</span>}
+                      </span>
+                      <span className="font-medium text-foreground">{brand.currency}{tax.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {brand.serviceChargeEnabled && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-1.5">
+                        Service {brand.serviceChargeType === 'percentage' && <span className="text-[10px] bg-muted px-1 rounded uppercase font-bold text-muted-foreground">{brand.serviceChargeRate}%</span>}
+                      </span>
+                      <span className="font-medium text-foreground">{brand.currency}{serviceCharge.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {brand.additionalFeeEnabled && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-1.5">
+                        {brand.additionalFeeName} {brand.additionalFeeType === 'percentage' && <span className="text-[10px] bg-muted px-1 rounded uppercase font-bold text-muted-foreground">{brand.additionalFeeAmount}%</span>}
+                      </span>
+                      <span className="font-medium text-foreground">{brand.currency}{additionalFee.toFixed(2)}</span>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="flex items-center justify-between pt-3 mt-1 border-t border-dashed border-border/40">
+              <span className="text-base font-bold text-foreground">Total</span>
+              <span className="font-display text-2xl font-bold text-primary">{brand.currency}{total.toFixed(2)}</span>
             </div>
-            <Button className="w-full" size="lg" onClick={sendOrder} disabled={cart.length === 0}>
+            <Button className="w-full mt-2" size="lg" onClick={sendOrder} disabled={cart.length === 0}>
               <Send className="h-4 w-4" />
               {orderSent ? 'Order Sent!' : 'Send to Kitchen'}
             </Button>
@@ -336,22 +409,65 @@ function POSPage() {
             </DialogDescription>
           </DialogHeader>
           {selectedOrder && (
-            <div className="space-y-4">
-              <div className="space-y-2">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-border/10">
+                <div className="space-y-1">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Order Items</p>
+                  <p className="text-sm font-medium text-foreground">{selectedOrder.orderType === 'takeaway' ? '📦 Takeaway' : `Table ${selectedOrder.tableNumber}`}</p>
+                </div>
+                <div className="text-right space-y-1">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Date & Time</p>
+                  <p className="text-xs text-foreground">{new Date(selectedOrder.createdAt).toLocaleDateString()} {new Date(selectedOrder.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
                 {selectedOrder.items.map((item, i) => (
-                  <div key={i} className="flex justify-between text-sm">
-                    <span>{item.quantity}x {item.menuItem.name}</span>
-                    <span>{brand.currency}{(item.menuItem.price * item.quantity).toFixed(2)}</span>
+                  <div key={i} className="flex justify-between items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">{item.quantity}x {item.menuItem.name}</p>
+                      {item.notes && <p className="text-xs text-muted-foreground italic mt-0.5 line-clamp-1">{item.notes}</p>}
+                    </div>
+                    <span className="text-sm font-semibold text-foreground whitespace-nowrap">{brand.currency}{(item.menuItem.price * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
-              <div className="border-t pt-2 flex justify-between font-bold">
-                <span>Total</span>
-                <span>{brand.currency}{selectedOrder.total.toFixed(2)}</span>
+
+              <div className="space-y-2.5 border-t border-border/10 pt-5 mt-2 bg-surface-low/30 rounded-2xl p-4">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span className="font-medium">{brand.currency}{(selectedOrder.subtotal ?? selectedOrder.total).toFixed(2)}</span>
+                </div>
+                {selectedOrder.taxAmount ? (
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Tax Amount</span>
+                    <span className="font-medium text-foreground">{brand.currency}{selectedOrder.taxAmount.toFixed(2)}</span>
+                  </div>
+                ) : null}
+                {selectedOrder.serviceChargeAmount ? (
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Service Charge</span>
+                    <span className="font-medium text-foreground">{brand.currency}{selectedOrder.serviceChargeAmount.toFixed(2)}</span>
+                  </div>
+                ) : null}
+                {selectedOrder.additionalFeeAmount ? (
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Other Fees</span>
+                    <span className="font-medium text-foreground">{brand.currency}{selectedOrder.additionalFeeAmount.toFixed(2)}</span>
+                  </div>
+                ) : null}
+                <div className="flex justify-between pt-3 mt-1 border-t border-dashed border-border/40">
+                  <span className="text-base font-bold text-foreground">Total Paid</span>
+                  <span className="text-xl font-display font-bold text-primary">{brand.currency}{selectedOrder.total.toFixed(2)}</span>
+                </div>
               </div>
-              <Button className="w-full" onClick={() => window.print()}>
-                <Printer className="mr-2 h-4 w-4" /> Print Invoice
-              </Button>
+
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1" onClick={() => setSelectedOrder(null)}>Close</Button>
+                <Button className="flex-1" onClick={() => window.print()}>
+                  <Printer className="mr-2 h-4 w-4" /> Print Invoice
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
@@ -400,9 +516,31 @@ function POSPage() {
             </tbody>
           </table>
 
-          <div className="mt-6 border-t border-dashed border-gray-400 pt-3">
-            <div className="flex justify-between text-base font-bold">
-              <span>TOTAL</span>
+          <div className="mt-6 border-t border-dashed border-gray-400 pt-3 space-y-1">
+            <div className="flex justify-between text-[10px] text-gray-600">
+              <span>Items Subtotal</span>
+              <span>{brand.currency}{(selectedOrder.subtotal ?? selectedOrder.total).toFixed(2)}</span>
+            </div>
+            {selectedOrder.taxAmount ? (
+              <div className="flex justify-between text-[10px] text-gray-600">
+                <span>Tax</span>
+                <span>{brand.currency}{selectedOrder.taxAmount.toFixed(2)}</span>
+              </div>
+            ) : null}
+            {selectedOrder.serviceChargeAmount ? (
+              <div className="flex justify-between text-[10px] text-gray-600">
+                <span>Service Charge</span>
+                <span>{brand.currency}{selectedOrder.serviceChargeAmount.toFixed(2)}</span>
+              </div>
+            ) : null}
+            {selectedOrder.additionalFeeAmount ? (
+              <div className="flex justify-between text-[10px] text-gray-600">
+                <span>{brand.additionalFeeName || 'Other Fees'}</span>
+                <span>{brand.currency}{selectedOrder.additionalFeeAmount.toFixed(2)}</span>
+              </div>
+            ) : null}
+            <div className="mt-2 flex justify-between border-t border-dotted border-gray-400 pt-2 text-sm font-bold text-gray-900">
+              <span className="uppercase">Grand Total</span>
               <span>{brand.currency}{selectedOrder.total.toFixed(2)}</span>
             </div>
           </div>

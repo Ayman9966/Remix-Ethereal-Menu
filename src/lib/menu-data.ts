@@ -36,6 +36,10 @@ export interface Order {
   createdAt: Date;
   updatedAt: Date;
   total: number;
+  subtotal?: number;
+  taxAmount?: number;
+  serviceChargeAmount?: number;
+  additionalFeeAmount?: number;
 }
 
 export interface OrderItem {
@@ -73,6 +77,17 @@ export interface BrandSettings {
   nextOrderNumber: number;
   autoPrintInvoice: boolean;
   invoiceSize: '58mm' | '80mm';
+  // Tax & Fees
+  taxEnabled: boolean;
+  taxRate: number;
+  taxType: 'percentage' | 'fixed';
+  serviceChargeEnabled: boolean;
+  serviceChargeRate: number;
+  serviceChargeType: 'percentage' | 'fixed';
+  additionalFeeEnabled: boolean;
+  additionalFeeName: string;
+  additionalFeeAmount: number;
+  additionalFeeType: 'percentage' | 'fixed';
 }
 
 export const defaultBrand: BrandSettings = {
@@ -95,6 +110,16 @@ export const defaultBrand: BrandSettings = {
   nextOrderNumber: 1,
   autoPrintInvoice: false,
   invoiceSize: '80mm',
+  taxEnabled: false,
+  taxRate: 0,
+  taxType: 'percentage',
+  serviceChargeEnabled: false,
+  serviceChargeRate: 0,
+  serviceChargeType: 'percentage',
+  additionalFeeEnabled: false,
+  additionalFeeName: 'Processing Fee',
+  additionalFeeAmount: 0,
+  additionalFeeType: 'fixed',
 };
 
 export const defaultCategories: Category[] = [

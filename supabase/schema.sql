@@ -62,9 +62,19 @@ CREATE TABLE IF NOT EXISTS public.orders (
   order_type public.order_type NOT NULL DEFAULT 'dine-in',
   table_number INT,
   total NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  subtotal NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  tax_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  service_charge_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  additional_fee_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE public.orders
+  ADD COLUMN IF NOT EXISTS subtotal NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS tax_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS service_charge_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS additional_fee_amount NUMERIC(10, 2) NOT NULL DEFAULT 0;
 
 -- Order Items (join table)
 CREATE TABLE IF NOT EXISTS public.order_items (
@@ -98,6 +108,16 @@ CREATE TABLE IF NOT EXISTS public.brand_settings (
   board_show_price BOOLEAN NOT NULL DEFAULT true,
   board_show_description BOOLEAN NOT NULL DEFAULT true,
   board_show_prep_time BOOLEAN NOT NULL DEFAULT true,
+  tax_enabled BOOLEAN NOT NULL DEFAULT false,
+  tax_rate NUMERIC(5, 2) NOT NULL DEFAULT 0,
+  tax_type TEXT NOT NULL DEFAULT 'percentage', -- 'percentage' or 'fixed'
+  service_charge_enabled BOOLEAN NOT NULL DEFAULT false,
+  service_charge_rate NUMERIC(5, 2) NOT NULL DEFAULT 0,
+  service_charge_type TEXT NOT NULL DEFAULT 'percentage',
+  additional_fee_enabled BOOLEAN NOT NULL DEFAULT false,
+  additional_fee_name TEXT NOT NULL DEFAULT 'Processing Fee',
+  additional_fee_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  additional_fee_type TEXT NOT NULL DEFAULT 'fixed',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -109,6 +129,16 @@ ALTER TABLE public.brand_settings
   ADD COLUMN IF NOT EXISTS board_show_price BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS board_show_description BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS board_show_prep_time BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS tax_enabled BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS tax_rate NUMERIC(5, 2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS tax_type TEXT NOT NULL DEFAULT 'percentage',
+  ADD COLUMN IF NOT EXISTS service_charge_enabled BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS service_charge_rate NUMERIC(5, 2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS service_charge_type TEXT NOT NULL DEFAULT 'percentage',
+  ADD COLUMN IF NOT EXISTS additional_fee_enabled BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS additional_fee_name TEXT NOT NULL DEFAULT 'Processing Fee',
+  ADD COLUMN IF NOT EXISTS additional_fee_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS additional_fee_type TEXT NOT NULL DEFAULT 'fixed',
   ADD COLUMN IF NOT EXISTS auto_print_invoice BOOLEAN NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS invoice_size TEXT NOT NULL DEFAULT '80mm';
 

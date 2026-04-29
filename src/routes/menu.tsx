@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMenu } from '@/hooks/use-menu-context';
-import { Search, Clock, UtensilsCrossed, Plus, Minus, ShoppingCart, X, Send, Check, Package, Bell } from 'lucide-react';
+import { Search, Clock, UtensilsCrossed, Plus, Minus, ShoppingCart, X, Send, Check, Package, Bell, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -42,6 +42,7 @@ function CustomerMenuPage() {
   const onCooldown = cooldownRemaining > 0 && lastCallForTable > 0;
   const formatCountdown = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [showSummary, setShowSummary] = useState(false);
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [showCart, setShowCart] = useState(false);
@@ -199,7 +200,21 @@ function CustomerMenuPage() {
 
   const removeFromCart = (id: string) => setCart(prev => prev.filter(c => c.menuItem.id !== id));
 
-  const total = cart.reduce((sum, c) => sum + c.menuItem.price * c.quantity, 0);
+  const subtotal = cart.reduce((sum, c) => sum + c.menuItem.price * c.quantity, 0);
+  
+  const tax = brand.taxEnabled 
+    ? (brand.taxType === 'percentage' ? (subtotal * (brand.taxRate / 100)) : brand.taxRate)
+    : 0;
+    
+  const serviceCharge = brand.serviceChargeEnabled
+    ? (brand.serviceChargeType === 'percentage' ? (subtotal * (brand.serviceChargeRate / 100)) : brand.serviceChargeRate)
+    : 0;
+    
+  const additionalFee = brand.additionalFeeEnabled
+    ? (brand.additionalFeeType === 'percentage' ? (subtotal * (brand.additionalFeeAmount / 100)) : brand.additionalFeeAmount)
+    : 0;
+
+  const total = subtotal + tax + serviceCharge + additionalFee;
   const cartCount = cart.reduce((sum, c) => sum + c.quantity, 0);
 
   const getItemQty = (id: string) => cart.find(c => c.menuItem.id === id)?.quantity ?? 0;
@@ -216,6 +231,10 @@ function CustomerMenuPage() {
       createdAt: new Date(),
       updatedAt: new Date(),
       total,
+      subtotal,
+      taxAmount: tax,
+      serviceChargeAmount: serviceCharge,
+      additionalFeeAmount: additionalFee,
     });
     
     if (orderType === 'takeaway') {
@@ -675,15 +694,64 @@ function CustomerMenuPage() {
               ))}
             </div>
 
-            <div className="mt-4 space-y-3 pt-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Total</span>
-                <span className="font-display text-2xl font-bold text-foreground">{brand.currency}{total.toFixed(2)}</span>
+            <div className="mt-4 pt-4 border-t border-border/10">
+              <AnimatePresence>
+                {showSummary && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden space-y-2 mb-4"
+                  >
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Items Subtotal</span>
+                      <span className="font-medium text-foreground">{brand.currency}{subtotal.toFixed(2)}</span>
+                    </div>
+                    
+                    {brand.taxEnabled && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground flex items-center gap-1.5">
+                          Tax {brand.taxType === 'percentage' && <span className="text-[10px] bg-muted px-1 rounded uppercase font-bold text-muted-foreground">{brand.taxRate}%</span>}
+                        </span>
+                        <span className="font-medium text-foreground">{brand.currency}{tax.toFixed(2)}</span>
+                      </div>
+                    )}
+                    
+                    {brand.serviceChargeEnabled && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground flex items-center gap-1.5">
+                          Service {brand.serviceChargeType === 'percentage' && <span className="text-[10px] bg-muted px-1 rounded uppercase font-bold text-muted-foreground">{brand.serviceChargeRate}%</span>}
+                        </span>
+                        <span className="font-medium text-foreground">{brand.currency}{serviceCharge.toFixed(2)}</span>
+                      </div>
+                    )}
+                    
+                    {brand.additionalFeeEnabled && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground flex items-center gap-1.5">
+                          {brand.additionalFeeName} {brand.additionalFeeType === 'percentage' && <span className="text-[10px] bg-muted px-1 rounded uppercase font-bold text-muted-foreground">{brand.additionalFeeAmount}%</span>}
+                        </span>
+                        <span className="font-medium text-foreground">{brand.currency}{additionalFee.toFixed(2)}</span>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div 
+                className="flex items-center justify-between pt-3 mt-1 border-t border-dashed border-border/40 cursor-pointer group"
+                onClick={() => setShowSummary(!showSummary)}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-bold text-foreground">Amount to Pay</span>
+                  {showSummary ? <ChevronUp className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" /> : <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />}
+                </div>
+                <span className="font-display text-2xl font-bold text-primary">{brand.currency}{total.toFixed(2)}</span>
               </div>
               <button
                 onClick={placeOrder}
                 disabled={cart.length === 0}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 font-medium text-primary-foreground shadow-ambient-sm transition-all hover:shadow-ambient active:scale-[0.98] disabled:opacity-50"
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 font-bold text-primary-foreground shadow-ambient transition-all hover:shadow-lg active:scale-[0.98] disabled:opacity-50"
               >
                 <Send className="h-4 w-4" />
                 Place Order
