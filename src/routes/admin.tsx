@@ -3,13 +3,32 @@ import { AppHeader } from '@/components/AppHeader';
 import { useMenu } from '@/hooks/use-menu-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, UtensilsCrossed, Tag, Palette, Save, X, ImageIcon, ShoppingCart, Clock, Maximize, Hash, Package, Bell, Check, QrCode, Download, Printer, ExternalLink } from 'lucide-react';
+import { Plus, Pencil, Trash2, UtensilsCrossed, Tag, Palette, Save, X, ImageIcon, ShoppingCart, Clock, Maximize, Hash, Package, Bell, Check, QrCode, Download, Printer, ExternalLink, Search, GripVertical, Settings, RotateCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import type { MenuItem, Category } from '@/lib/menu-data';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { Link } from '@tanstack/react-router';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,16 +56,18 @@ export const Route = createFileRoute('/admin')({
   component: AdminPage,
 });
 
-type Tab = 'items' | 'categories' | 'branding' | 'qr';
+type Tab = 'items' | 'categories' | 'branding' | 'qr' | 'analytics' | 'settings';
 
 function AdminPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('items');
+  const [activeTab, setActiveTab] = useState<Tab>('analytics');
 
-  const tabs: { id: Tab; label: string; icon: typeof UtensilsCrossed }[] = [
+  const tabs: { id: Tab; label: string; icon: any }[] = [
+    { id: 'analytics', label: 'Analytics', icon: ShoppingCart },
     { id: 'items', label: 'Menu Items', icon: UtensilsCrossed },
     { id: 'categories', label: 'Categories', icon: Tag },
     { id: 'branding', label: 'Branding', icon: Palette },
     { id: 'qr', label: 'Table QR Codes', icon: QrCode },
+    { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
   return (
@@ -80,11 +101,201 @@ function AdminPage() {
         </div>
 
         <div className="mt-6">
+          {activeTab === 'analytics' && <AnalyticsTab />}
           {activeTab === 'items' && <MenuItemsTab />}
           {activeTab === 'categories' && <CategoriesTab />}
           {activeTab === 'branding' && <BrandingTab />}
           {activeTab === 'qr' && <QrCodesTab />}
+          {activeTab === 'settings' && <SettingsTab />}
         </div>
+      </div>
+    </div>
+  );
+}
+
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
+  LineChart, Line, PieChart, Pie, Cell
+} from 'recharts';
+
+function AnalyticsTab() {
+  const { orders, brand } = useMenu();
+
+  const stats = useMemo(() => {
+    const totalRevenue = orders.reduce((acc, o) => acc + o.total, 0);
+    const totalOrders = orders.length;
+    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    
+    // Top items
+    const itemMap = new Map<string, number>();
+    orders.forEach(o => {
+      o.items.forEach(item => {
+        const name = item.menuItem.name;
+        itemMap.set(name, (itemMap.get(name) || 0) + item.quantity);
+      });
+    });
+    
+    const topItemsData = Array.from(itemMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+
+    // Revenue over time (last 7 days)
+    const dailyMap = new Map<string, number>();
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      dailyMap.set(d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), 0);
+    }
+
+    orders.forEach(o => {
+      const dateKey = new Date(o.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      if (dailyMap.has(dateKey)) {
+        dailyMap.set(dateKey, dailyMap.get(dateKey)! + o.total);
+      }
+    });
+
+    const revenueData = Array.from(dailyMap.entries()).map(([date, revenue]) => ({ date, revenue }));
+
+    // Order type distribution
+    const dineInCount = orders.filter(o => o.orderType === 'dine-in').length;
+    const takeawayCount = orders.filter(o => o.orderType === 'takeaway').length;
+    
+    const typeData = [
+      { name: 'Dine In', value: dineInCount },
+      { name: 'Takeaway', value: takeawayCount }
+    ];
+
+    return { totalRevenue, totalOrders, avgOrderValue, topItemsData, revenueData, typeData };
+  }, [orders]);
+
+  const COLORS = ['#426564', '#7BA09F', '#A3C1C0', '#D1E0DF', '#EDF2F2'];
+
+  return (
+    <div className="space-y-6">
+      {/* Stats Overview */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card className="bg-primary text-primary-foreground">
+          <CardContent className="p-6">
+            <p className="text-xs font-medium uppercase tracking-wider opacity-80">Total Revenue</p>
+            <h3 className="mt-2 font-display text-3xl font-bold">{brand.currency}{stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Total Orders</p>
+            <h3 className="mt-2 font-display text-3xl font-bold">{stats.totalOrders}</h3>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Avg. Order Value</p>
+            <h3 className="mt-2 font-display text-3xl font-bold">{brand.currency}{stats.avgOrderValue.toFixed(2)}</h3>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Revenue Chart */}
+        <Card>
+          <CardContent className="p-6">
+            <h4 className="mb-6 font-display text-base font-bold">Revenue (Last 7 Days)</h4>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={stats.revenueData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted)/0.2)" />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} tickFormatter={(val) => `${brand.currency}${val}`} />
+                  <RechartsTooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Line type="monotone" dataKey="revenue" stroke="#426564" strokeWidth={3} dot={{ r: 4, fill: '#426564' }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Top Items Chart */}
+        <Card>
+          <CardContent className="p-6">
+            <h4 className="mb-6 font-display text-base font-bold">Top 5 Items (by Quantity)</h4>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.topItemsData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--muted)/0.2)" />
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={100} tick={{ fontSize: 11 }} />
+                  <RechartsTooltip 
+                    cursor={{ fill: 'transparent' }}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Bar dataKey="value" fill="#426564" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Order Types */}
+        <Card>
+          <CardContent className="p-6">
+            <h4 className="mb-6 font-display text-base font-bold">Order Type Split</h4>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={stats.typeData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {stats.typeData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip 
+                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Legend verticalAlign="bottom" height={36}/>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Table Summary */}
+        <Card>
+          <CardContent className="p-6 overflow-auto">
+            <h4 className="mb-4 font-display text-base font-bold">Recent Orders Summary</h4>
+            <div className="min-w-[300px]">
+               <table className="w-full text-sm">
+                 <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="pb-2 font-medium">Order #</th>
+                      <th className="pb-2 font-medium">Items</th>
+                      <th className="pb-2 font-medium text-right">Total</th>
+                    </tr>
+                 </thead>
+                 <tbody className="divide-y">
+                    {orders.slice(0, 5).map(o => (
+                      <tr key={o.id}>
+                        <td className="py-2.5 font-medium">#{o.orderNumber}</td>
+                        <td className="py-2.5 text-muted-foreground">
+                          {o.items.map(i => `${i.quantity}x ${i.menuItem.name}`).join(', ').slice(0, 30)}...
+                        </td>
+                        <td className="py-2.5 text-right font-bold">{brand.currency}{o.total.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                 </tbody>
+               </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
@@ -95,6 +306,7 @@ function MenuItemsTab() {
   const [editing, setEditing] = useState<MenuItem | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const openNew = () => {
     setEditing({
@@ -111,16 +323,53 @@ function MenuItemsTab() {
 
   const save = () => {
     if (!editing || !editing.name.trim()) return;
-    if (isNew) addItem(editing);
-    else updateItem(editing);
+    if (isNew) {
+      addItem(editing);
+      toast.success("Item added successfully");
+    } else {
+      updateItem(editing);
+      toast.success("Item updated successfully");
+    }
     setEditing(null);
     setIsNew(false);
   };
 
+  const filteredItems = useMemo(() => {
+    const sorted = [...items].sort((a, b) => {
+      const catA = categories.find(c => c.id === a.categoryId);
+      const catB = categories.find(c => c.id === b.categoryId);
+      if (catA && catB && catA.id !== catB.id) {
+        return (catA.order || 0) - (catB.order || 0);
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    if (!searchQuery.trim()) return sorted;
+
+    const query = searchQuery.toLowerCase();
+    return sorted.filter(item => 
+      item.name.toLowerCase().includes(query) || 
+      item.description?.toLowerCase().includes(query) ||
+      categories.find(c => c.id === item.categoryId)?.name.toLowerCase().includes(query)
+    );
+  }, [items, categories, searchQuery]);
+
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{items.length} items</span>
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-1 items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search items..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full rounded-xl bg-card border border-border/40 pl-10 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
+            />
+          </div>
+          <span className="hidden text-sm text-muted-foreground sm:inline-block">{filteredItems.length} of {items.length} items</span>
+        </div>
         <Button onClick={openNew}><Plus className="h-4 w-4" />Add Item</Button>
       </div>
 
@@ -172,7 +421,7 @@ function MenuItemsTab() {
       )}
 
       <div className="space-y-2">
-        {items.map(item => {
+        {filteredItems.map(item => {
           const cat = categories.find(c => c.id === item.categoryId);
           return (
             <div key={item.id} className="flex items-center gap-4 rounded-2xl bg-card p-4 shadow-ambient-sm">
@@ -231,9 +480,17 @@ function MenuItemsTab() {
 }
 
 function CategoriesTab() {
-  const { categories, addCategory, updateCategory, removeCategory } = useMenu();
+  const { categories, addCategory, updateCategory, removeCategory, reorderCategories } = useMenu();
   const [editing, setEditing] = useState<Category | null>(null);
   const [isNew, setIsNew] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const openNew = () => {
     setEditing({ id: isSupabaseConfigured() ? crypto.randomUUID() : `cat-${Date.now()}`, name: '', icon: '📋', order: categories.length + 1 });
@@ -242,10 +499,36 @@ function CategoriesTab() {
 
   const save = () => {
     if (!editing || !editing.name.trim()) return;
-    if (isNew) addCategory(editing);
-    else updateCategory(editing);
+    if (isNew) {
+      addCategory(editing);
+      toast.success("Category added successfully");
+    } else {
+      updateCategory(editing);
+      toast.success("Category updated successfully");
+    }
     setEditing(null);
     setIsNew(false);
+  };
+
+  const sortedCategories = useMemo(() => {
+    return [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [categories]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = sortedCategories.findIndex(c => c.id === active.id);
+      const newIndex = sortedCategories.findIndex(c => c.id === over.id);
+      
+      const newSorted = arrayMove(sortedCategories, oldIndex, newIndex);
+      // Update the 'order' property for each category
+      const updated = newSorted.map((cat, index) => ({
+        ...cat,
+        order: index + 1
+      }));
+      
+      reorderCategories(updated);
+    }
   };
 
   return (
@@ -254,6 +537,32 @@ function CategoriesTab() {
         <span className="text-sm text-muted-foreground">{categories.length} categories</span>
         <Button onClick={openNew}><Plus className="h-4 w-4" />Add Category</Button>
       </div>
+
+      <AlertDialog open={!!categoryToDelete} onOpenChange={(open) => !open && setCategoryToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This category will be removed. If there are items or orders referencing it, it will be moved to the archive instead of being permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (categoryToDelete) {
+                  removeCategory(categoryToDelete);
+                  toast.success("Category removed successfully");
+                  setCategoryToDelete(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {editing && (
         <Card className="mb-6">
@@ -272,22 +581,128 @@ function CategoriesTab() {
         </Card>
       )}
 
-      <div className="space-y-2">
-        {categories.map(cat => (
-          <div key={cat.id} className="flex items-center gap-4 rounded-2xl bg-card p-4 shadow-ambient-sm">
-            <span className="text-2xl">{cat.icon}</span>
-            <span className="flex-1 font-display text-sm font-semibold text-foreground">{cat.name}</span>
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" onClick={() => { setEditing(cat); setIsNew(false); }}>
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => removeCategory(cat.id)}>
-                <Trash2 className="h-4 w-4 text-destructive" />
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+        modifiers={[restrictToVerticalAxis]}
+      >
+        <SortableContext
+          items={sortedCategories.map(c => c.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-2">
+            {sortedCategories.map(cat => (
+              <SortableCategoryItem 
+                key={cat.id} 
+                cat={cat} 
+                onEdit={() => { setEditing(cat); setIsNew(false); }}
+                onRemove={() => setCategoryToDelete(cat.id)}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    </div>
+  );
+}
+
+interface SortableCategoryItemProps {
+  cat: Category;
+  onEdit: () => void;
+  onRemove: () => void;
+}
+
+function SortableCategoryItem({ cat, onEdit, onRemove }: SortableCategoryItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: cat.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 1,
+  };
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      className={`flex items-center gap-4 rounded-2xl bg-card p-4 shadow-ambient-sm group ${isDragging ? 'opacity-50 ring-2 ring-primary' : ''}`}
+    >
+      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
+        <GripVertical className="h-5 w-5" />
+      </div>
+      <span className="text-2xl">{cat.icon}</span>
+      <span className="flex-1 font-display text-sm font-semibold text-foreground">{cat.name}</span>
+      <div className="flex items-center gap-1">
+        <Button variant="ghost" size="icon" onClick={onEdit}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={onRemove}>
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SettingsTab() {
+  const [isClearing, setIsClearing] = useState(false);
+
+  const handleClearCache = async () => {
+    setIsClearing(true);
+    try {
+      const response = await fetch('/api/cache/invalidate', { method: 'POST' });
+      if (response.ok) {
+        toast.success("Cache cleared successfully. Refreshing page...");
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        toast.error("Failed to clear cache.");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Error clearing cache.");
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 pb-20">
+      <Card>
+        <CardContent className="p-6">
+          <h3 className="font-display text-lg font-bold text-foreground">System Maintenance</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Perform technical operations and manage application state.</p>
+          
+          <div className="mt-6 flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-surface-low p-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-primary/10 p-2">
+                  <RotateCw className={`h-5 w-5 text-primary ${isClearing ? 'animate-spin' : ''}`} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Clear Application Cache</p>
+                  <p className="text-xs text-muted-foreground">Forces the server to rebuild static data for users. Use this if updates aren't appearing correctly.</p>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={handleClearCache} 
+                disabled={isClearing}
+                className="rounded-xl border-primary/20 hover:bg-primary/10 h-10 px-6"
+              >
+                {isClearing ? 'Clearing...' : 'Clear Cache'}
               </Button>
             </div>
           </div>
-        ))}
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -565,7 +980,10 @@ function BrandingTab() {
           </div>
         </div>
         <div className="flex items-end sm:col-span-2">
-          <Button onClick={() => updateBrand(form)} className="w-full">
+          <Button onClick={() => {
+            updateBrand(form);
+            toast.success("Branding settings saved successfully");
+          }} className="w-full">
             <Save className="h-4 w-4" />
             Save Branding
           </Button>
@@ -686,6 +1104,7 @@ function QrCodesTab() {
     a.download = `${brand.restaurantName.replace(/\s+/g, '-').toLowerCase()}-table-${table}.svg`;
     a.click();
     URL.revokeObjectURL(url);
+    toast.success(`QR Code for Table ${table} downloaded`);
   };
 
   const printAll = () => window.print();

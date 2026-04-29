@@ -34,6 +34,7 @@ interface MenuContextType {
   addCategory: (cat: Category) => void;
   updateCategory: (cat: Category) => void;
   removeCategory: (id: string) => void;
+  reorderCategories: (newCategories: Category[]) => void;
   updateOrder: (order: Order) => void;
   addOrder: (order: Omit<Order, 'orderNumber'>) => void;
   updateBrand: (brand: BrandSettings) => void;
@@ -90,9 +91,15 @@ export function MenuProvider({ children }: { children: ReactNode }) {
   const { isOnline } = useOnlineStatus();
   const lastSeenIds = useRef<Set<string>>(new Set(waiterCalls.map(c => c.id)));
 
+  const lastMutationRef = useRef<number>(0);
+
   const syncQueueRef = useRef<any[]>([]);
   const isOnlineRef = useRef(isOnline);
   useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
+
+  const markMutation = useCallback(() => {
+    lastMutationRef.current = Date.now();
+  }, []);
 
   // Helper to merge server data with pending local mutations
   const mergeWithPending = useCallback((serverOrders: Order[], currentQueue: any[], completed: Record<string, { status: string, timestamp: number }>) => {
@@ -299,21 +306,24 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     const channel = supabase
       .channel('savor-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
+        if (Date.now() - lastMutationRef.current < 2000) return;
         schedule('categories', async () => {
           const next = await fetchCategories();
-          if (!cancelled) setCategories(next);
+          if (!cancelled && Date.now() - lastMutationRef.current > 1500) setCategories(next);
         });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, () => {
+        if (Date.now() - lastMutationRef.current < 2000) return;
         schedule('menu_items', async () => {
           const next = await fetchMenuItems();
-          if (!cancelled) setItems(next);
+          if (!cancelled && Date.now() - lastMutationRef.current > 1500) setItems(next);
         });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'brand_settings' }, () => {
+        if (Date.now() - lastMutationRef.current < 2000) return;
         schedule('brand_settings', async () => {
           const next = await fetchBrandSettings();
-          if (!cancelled) setBrand(next);
+          if (!cancelled && Date.now() - lastMutationRef.current > 1500) setBrand(next);
         });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
@@ -400,29 +410,40 @@ export function MenuProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addItem = useCallback((item: MenuItem) => {
+    markMutation();
     setItems(prev => [...prev, item]);
     syncEngine.enqueue('UPSERT_ITEM', item);
-  }, []);
+  }, [markMutation]);
   const updateItem = useCallback((item: MenuItem) => {
+    markMutation();
     setItems(prev => prev.map(i => i.id === item.id ? item : i));
     syncEngine.enqueue('UPSERT_ITEM', item);
-  }, []);
+  }, [markMutation]);
   const removeItem = useCallback((id: string) => {
+    markMutation();
     setItems(prev => prev.filter(i => i.id !== id));
     syncEngine.enqueue('DELETE_ITEM', { id });
-  }, []);
+  }, [markMutation]);
   const addCategory = useCallback((cat: Category) => {
+    markMutation();
     setCategories(prev => [...prev, cat]);
     syncEngine.enqueue('UPSERT_CATEGORY', cat);
-  }, []);
+  }, [markMutation]);
   const updateCategory = useCallback((cat: Category) => {
+    markMutation();
     setCategories(prev => prev.map(c => c.id === cat.id ? cat : c));
     syncEngine.enqueue('UPSERT_CATEGORY', cat);
-  }, []);
+  }, [markMutation]);
   const removeCategory = useCallback((id: string) => {
+    markMutation();
     setCategories(prev => prev.filter(c => c.id !== id));
     syncEngine.enqueue('DELETE_CATEGORY', { id });
-  }, []);
+  }, [markMutation]);
+  const reorderCategories = useCallback((newCats: Category[]) => {
+    markMutation();
+    setCategories(newCats);
+    syncEngine.enqueue('BULK_UPSERT_CATEGORIES', newCats);
+  }, [markMutation]);
   const updateOrder = useCallback((order: Order) => {
     setOrders((prev) => prev.map((o) => (o.id === order.id ? order : o)));
     syncEngine.enqueue('UPDATE_ORDER_STATUS', { id: order.id, status: order.status });
@@ -439,9 +460,10 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     syncEngine.enqueue('CREATE_ORDER', order);
   }, []);
   const updateBrand = useCallback((b: BrandSettings) => {
+    markMutation();
     setBrand(b);
     syncEngine.enqueue('UPSERT_BRAND', b);
-  }, []);
+  }, [markMutation]);
 
   const callWaiter = useCallback((tableNumber: number) => {
     const COOLDOWN_MS = 60_000;
@@ -481,7 +503,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     <MenuContext.Provider value={{
       items, categories, orders: mergedOrders, brand, waiterCalls,
       addItem, updateItem, removeItem,
-      addCategory, updateCategory, removeCategory,
+      addCategory, updateCategory, removeCategory, reorderCategories,
       updateOrder, addOrder, updateBrand,
       callWaiter, acknowledgeCall, clearCall,
       searchQuery, setSearchQuery,

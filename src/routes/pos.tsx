@@ -121,6 +121,7 @@ function POSPage() {
     };
 
     addOrder(orderData);
+    toast.success("Order sent to kitchen successfully!");
 
     if (brand.autoPrintInvoice) {
       const optimisticOrderNumber = brand.nextOrderNumber;

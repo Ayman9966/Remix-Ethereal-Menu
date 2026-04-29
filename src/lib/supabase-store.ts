@@ -7,6 +7,7 @@ type DbCategory = {
   name: string;
   icon: string;
   sort_order: number;
+  is_archived?: boolean;
 };
 
 type DbMenuItem = {
@@ -18,6 +19,7 @@ type DbMenuItem = {
   image_url: string | null;
   available: boolean;
   preparation_time: number;
+  is_archived?: boolean;
 };
 
 type DbBrandSettings = {
@@ -71,6 +73,7 @@ function mapCategory(row: DbCategory): Category {
     name: row.name,
     icon: row.icon,
     order: row.sort_order,
+    archived: row.is_archived,
   };
 }
 
@@ -94,6 +97,7 @@ function mapMenuItem(row: DbMenuItem): MenuItem {
     image,
     available: row.available,
     preparationTime: row.preparation_time,
+    archived: row.is_archived,
   };
 }
 
@@ -142,7 +146,8 @@ export async function fetchCategories(): Promise<Category[]> {
   if (!supabase) return defaultCategories;
   const { data, error } = await supabase
     .from('categories')
-    .select('id,name,icon,sort_order')
+    .select('id,name,icon,sort_order,is_archived')
+    .or('is_archived.is.null,is_archived.eq.false')
     .order('sort_order', { ascending: true });
   if (error) throw error;
   return (data ?? []).map(mapCategory);
@@ -153,7 +158,8 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
   if (!supabase) return defaultMenuItems;
   const { data, error } = await supabase
     .from('menu_items')
-    .select('id,name,description,price,category_id,image_url,available,preparation_time')
+    .select('id,name,description,price,category_id,image_url,available,preparation_time,is_archived')
+    .or('is_archived.is.null,is_archived.eq.false')
     .order('created_at', { ascending: true });
   if (error) throw error;
   return (data ?? []).map(mapMenuItem);
@@ -333,15 +339,27 @@ export async function fetchBootstrapData(): Promise<{
   return { categories, items, brand, orders };
 }
 
-export async function upsertCategory(cat: Category): Promise<void> {
+export async function upsertCategory(cat: Category | Category[]): Promise<void> {
   const supabase = getSupabaseClient();
   if (!supabase) return;
-  const { error } = await supabase.from('categories').upsert({
-    id: cat.id,
-    name: cat.name,
-    icon: cat.icon,
-    sort_order: cat.order,
-  });
+  
+  const toUpsert = Array.isArray(cat) 
+    ? cat.map(c => ({
+        id: c.id,
+        name: c.name,
+        icon: c.icon,
+        sort_order: c.order,
+        is_archived: c.archived ?? false,
+      }))
+    : {
+        id: cat.id,
+        name: cat.name,
+        icon: cat.icon,
+        sort_order: cat.order,
+        is_archived: cat.archived ?? false,
+      };
+
+  const { error } = await supabase.from('categories').upsert(toUpsert);
   if (error) throw error;
   fetch('/api/cache/invalidate', { method: 'POST' }).catch(() => undefined);
 }
@@ -350,7 +368,18 @@ export async function deleteCategory(id: string): Promise<void> {
   const supabase = getSupabaseClient();
   if (!supabase) return;
   const { error } = await supabase.from('categories').delete().eq('id', id);
-  if (error) throw error;
+  if (error) {
+    // If foreign key constraint fails, archive it instead
+    if (error.code === '23503') {
+      const { error: archiveError } = await supabase
+        .from('categories')
+        .update({ is_archived: true })
+        .eq('id', id);
+      if (archiveError) throw archiveError;
+      return;
+    }
+    throw error;
+  }
   fetch('/api/cache/invalidate', { method: 'POST' }).catch(() => undefined);
 }
 
@@ -366,6 +395,7 @@ export async function upsertMenuItem(item: MenuItem): Promise<void> {
     image_url: item.image ?? null,
     available: item.available,
     preparation_time: item.preparationTime,
+    is_archived: item.archived ?? false,
   });
   if (error) throw error;
   fetch('/api/cache/invalidate', { method: 'POST' }).catch(() => undefined);
@@ -375,7 +405,18 @@ export async function deleteMenuItem(id: string): Promise<void> {
   const supabase = getSupabaseClient();
   if (!supabase) return;
   const { error } = await supabase.from('menu_items').delete().eq('id', id);
-  if (error) throw error;
+  if (error) {
+    // If foreign key constraint fails, archive it instead
+    if (error.code === '23503') {
+      const { error: archiveError } = await supabase
+        .from('menu_items')
+        .update({ is_archived: true })
+        .eq('id', id);
+      if (archiveError) throw archiveError;
+      return;
+    }
+    throw error;
+  }
   fetch('/api/cache/invalidate', { method: 'POST' }).catch(() => undefined);
 }
 
@@ -482,6 +523,62 @@ export async function updateOrderStatus(
     .from('orders')
     .update({ status })
     .eq('id', orderId);
+  if (error) throw error;
+  fetch('/api/cache/invalidate', { method: 'POST' }).catch(() => undefined);
+}
+
+export async function fetchArchivedCategories(): Promise<Category[]> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('categories')
+    .select('id,name,icon,sort_order,is_archived')
+    .eq('is_archived', true)
+    .order('updated_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapCategory);
+}
+
+export async function fetchArchivedMenuItems(): Promise<MenuItem[]> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('menu_items')
+    .select('id,name,description,price,category_id,image_url,available,preparation_time,is_archived')
+    .eq('is_archived', true)
+    .order('updated_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapMenuItem);
+}
+
+export async function permanentDeleteCategory(id: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  const { error } = await supabase.from('categories').delete().eq('id', id);
+  if (error) throw error;
+  fetch('/api/cache/invalidate', { method: 'POST' }).catch(() => undefined);
+}
+
+export async function permanentDeleteMenuItem(id: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  const { error } = await supabase.from('menu_items').delete().eq('id', id);
+  if (error) throw error;
+  fetch('/api/cache/invalidate', { method: 'POST' }).catch(() => undefined);
+}
+
+export async function restoreCategory(id: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  const { error } = await supabase.from('categories').update({ is_archived: false }).eq('id', id);
+  if (error) throw error;
+  fetch('/api/cache/invalidate', { method: 'POST' }).catch(() => undefined);
+}
+
+export async function restoreMenuItem(id: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  const { error } = await supabase.from('menu_items').update({ is_archived: false }).eq('id', id);
   if (error) throw error;
   fetch('/api/cache/invalidate', { method: 'POST' }).catch(() => undefined);
 }

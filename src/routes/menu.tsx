@@ -168,10 +168,17 @@ function CustomerMenuPage() {
     return true;
   });
 
+  const sortedCategories = useMemo(() => {
+    return [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [categories]);
+
   const grouped = activeCategory
-    ? [{ category: categories.find(c => c.id === activeCategory)!, items: filtered }]
-    : categories
-        .map(cat => ({ category: cat, items: filtered.filter(i => i.categoryId === cat.id) }))
+    ? [{ category: categories.find(c => c.id === activeCategory)!, items: filtered.sort((a, b) => a.name.localeCompare(b.name)) }]
+    : sortedCategories
+        .map(cat => ({ 
+          category: cat, 
+          items: filtered.filter(i => i.categoryId === cat.id).sort((a, b) => a.name.localeCompare(b.name)) 
+        }))
         .filter(g => g.items.length > 0);
 
   const addToCart = (item: MenuItem) => {
@@ -276,7 +283,7 @@ function CustomerMenuPage() {
           >
             All
           </button>
-          {categories.map(cat => (
+          {sortedCategories.map(cat => (
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}

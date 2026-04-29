@@ -15,6 +15,7 @@ export interface MenuItem {
   image?: string;
   available: boolean;
   preparationTime: number; // minutes
+  archived?: boolean;
 }
 
 export interface Category {
@@ -22,6 +23,7 @@ export interface Category {
   name: string;
   icon: string;
   order: number;
+  archived?: boolean;
 }
 
 export interface Order {
@@ -96,26 +98,26 @@ export const defaultBrand: BrandSettings = {
 };
 
 export const defaultCategories: Category[] = [
-  { id: 'cat-1', name: 'Starters', icon: '🥗', order: 1 },
-  { id: 'cat-2', name: 'Main Course', icon: '🍽️', order: 2 },
-  { id: 'cat-3', name: 'Pasta', icon: '🍝', order: 3 },
-  { id: 'cat-4', name: 'Desserts', icon: '🍰', order: 4 },
-  { id: 'cat-5', name: 'Beverages', icon: '🥤', order: 5 },
+  { id: '550e8400-e29b-41d4-a716-446655440000', name: 'Appetizers', icon: '🥗', order: 1 },
+  { id: '550e8400-e29b-41d4-a716-446655440001', name: 'Main Course', icon: '🍽️', order: 2 },
+  { id: '550e8400-e29b-41d4-a716-446655440004', name: 'Pasta', icon: '🍝', order: 3 },
+  { id: '550e8400-e29b-41d4-a716-446655440002', name: 'Desserts', icon: '🍰', order: 4 },
+  { id: '550e8400-e29b-41d4-a716-446655440003', name: 'Beverages', icon: '🥤', order: 5 },
 ];
 
 export const defaultMenuItems: MenuItem[] = [
-  { id: 'm-1', name: 'Truffle Burrata', description: 'Creamy burrata with black truffle, heirloom tomatoes & basil oil', price: 16.50, categoryId: 'cat-1', image: truffleBurrata, available: true, preparationTime: 10 },
-  { id: 'm-2', name: 'Grilled Octopus', description: 'Charred octopus, smoked paprika, crispy potatoes & chimichurri', price: 18.00, categoryId: 'cat-1', available: true, preparationTime: 15 },
-  { id: 'm-3', name: 'Wagyu Ribeye', description: '12oz A5 wagyu, roasted garlic butter, seasonal vegetables', price: 58.00, categoryId: 'cat-2', image: wagyuRibeye, available: true, preparationTime: 25 },
-  { id: 'm-4', name: 'Pan-Seared Salmon', description: 'Atlantic salmon, lemon beurre blanc, asparagus & wild rice', price: 32.00, categoryId: 'cat-2', image: panSearedSalmon, available: true, preparationTime: 20 },
-  { id: 'm-5', name: 'Herb Roasted Chicken', description: 'Free-range chicken, rosemary jus, roasted root vegetables', price: 28.00, categoryId: 'cat-2', available: true, preparationTime: 22 },
-  { id: 'm-6', name: 'Lobster Linguine', description: 'Fresh lobster, cherry tomatoes, white wine & garlic', price: 36.00, categoryId: 'cat-3', image: lobsterLinguine, available: true, preparationTime: 18 },
-  { id: 'm-7', name: 'Truffle Carbonara', description: 'Guanciale, pecorino, egg yolk, black truffle shavings', price: 24.00, categoryId: 'cat-3', image: truffleCarbonara, available: true, preparationTime: 15 },
-  { id: 'm-8', name: 'Tiramisu', description: 'Classic Italian, mascarpone, espresso-soaked ladyfingers', price: 14.00, categoryId: 'cat-4', image: tiramisu, available: true, preparationTime: 5 },
-  { id: 'm-9', name: 'Crème Brûlée', description: 'Tahitian vanilla, caramelized sugar crust', price: 12.00, categoryId: 'cat-4', available: true, preparationTime: 5 },
-  { id: 'm-10', name: 'Sparkling Water', description: 'San Pellegrino, 750ml', price: 6.00, categoryId: 'cat-5', available: true, preparationTime: 1 },
-  { id: 'm-11', name: 'Craft Lemonade', description: 'House-made with lavender & fresh mint', price: 8.00, categoryId: 'cat-5', available: true, preparationTime: 3 },
-  { id: 'm-12', name: 'Espresso Martini', description: 'Vodka, fresh espresso, coffee liqueur, vanilla', price: 16.00, categoryId: 'cat-5', available: true, preparationTime: 5 },
+  { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', name: 'Truffle Burrata', description: 'Creamy burrata with black truffle, heirloom tomatoes & basil oil', price: 16.50, categoryId: '550e8400-e29b-41d4-a716-446655440000', image: truffleBurrata, available: true, preparationTime: 10 },
+  { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', name: 'Grilled Octopus', description: 'Charred octopus, smoked paprika, crispy potatoes & chimichurri', price: 18.00, categoryId: '550e8400-e29b-41d4-a716-446655440000', available: true, preparationTime: 15 },
+  { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', name: 'Wagyu Ribeye', description: '12oz A5 wagyu, roasted garlic butter, seasonal vegetables', price: 58.00, categoryId: '550e8400-e29b-41d4-a716-446655440001', image: wagyuRibeye, available: true, preparationTime: 25 },
+  { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14', name: 'Pan-Seared Salmon', description: 'Atlantic salmon, lemon beurre blanc, asparagus & wild rice', price: 32.00, categoryId: '550e8400-e29b-41d4-a716-446655440001', image: panSearedSalmon, available: true, preparationTime: 20 },
+  { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a15', name: 'Herb Roasted Chicken', description: 'Free-range chicken, rosemary jus, roasted root vegetables', price: 28.00, categoryId: '550e8400-e29b-41d4-a716-446655440001', available: true, preparationTime: 22 },
+  { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a16', name: 'Lobster Linguine', description: 'Fresh lobster, cherry tomatoes, white wine & garlic', price: 36.00, categoryId: '550e8400-e29b-41d4-a716-446655440004', image: lobsterLinguine, available: true, preparationTime: 18 },
+  { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a17', name: 'Truffle Carbonara', description: 'Guanciale, pecorino, egg yolk, black truffle shavings', price: 24.00, categoryId: '550e8400-e29b-41d4-a716-446655440004', image: truffleCarbonara, available: true, preparationTime: 15 },
+  { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a18', name: 'Tiramisu', description: 'Classic Italian, mascarpone, espresso-soaked ladyfingers', price: 14.00, categoryId: '550e8400-e29b-41d4-a716-446655440002', image: tiramisu, available: true, preparationTime: 5 },
+  { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a19', name: 'Crème Brûlée', description: 'Tahitian vanilla, caramelized sugar crust', price: 12.00, categoryId: '550e8400-e29b-41d4-a716-446655440002', available: true, preparationTime: 5 },
+  { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a20', name: 'Sparkling Water', description: 'San Pellegrino, 750ml', price: 6.00, categoryId: '550e8400-e29b-41d4-a716-446655440003', available: true, preparationTime: 1 },
+  { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a21', name: 'Craft Lemonade', description: 'House-made with lavender & fresh mint', price: 8.00, categoryId: '550e8400-e29b-41d4-a716-446655440003', available: true, preparationTime: 3 },
+  { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', name: 'Espresso Martini', description: 'Vodka, fresh espresso, coffee liqueur, vanilla', price: 16.00, categoryId: '550e8400-e29b-41d4-a716-446655440003', available: true, preparationTime: 5 },
 ];
 
 export const sampleOrders: Order[] = [

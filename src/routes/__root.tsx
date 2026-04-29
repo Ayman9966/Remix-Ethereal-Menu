@@ -2,6 +2,7 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/r
 import appCss from "../styles.css?url";
 import { MenuProvider } from "@/hooks/use-menu-context";
 import { registerServiceWorker } from "@/lib/sw-register";
+import { Toaster } from 'sonner';
 
 function NotFoundComponent() {
   return (
@@ -57,6 +58,7 @@ function RootComponent() {
 
   return (
     <MenuProvider>
+      <Toaster richColors position="top-right" />
       <Outlet />
     </MenuProvider>
   );

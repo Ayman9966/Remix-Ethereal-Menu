@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS public.categories (
   name TEXT NOT NULL,
   icon TEXT NOT NULL DEFAULT '📋',
   sort_order INT NOT NULL DEFAULT 0,
+  is_archived BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -48,6 +49,7 @@ CREATE TABLE IF NOT EXISTS public.menu_items (
   image_url TEXT,
   available BOOLEAN NOT NULL DEFAULT true,
   preparation_time INT NOT NULL DEFAULT 10, -- minutes
+  is_archived BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -109,6 +111,12 @@ ALTER TABLE public.brand_settings
   ADD COLUMN IF NOT EXISTS board_show_prep_time BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS auto_print_invoice BOOLEAN NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS invoice_size TEXT NOT NULL DEFAULT '80mm';
+
+ALTER TABLE public.categories
+  ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE public.menu_items
+  ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT false;
 
 -- User Roles (CRITICAL: roles stored separately — never on profile/users table)
 CREATE TABLE IF NOT EXISTS public.user_roles (
@@ -364,19 +372,27 @@ INSERT INTO public.brand_settings (
   false, '80mm'
 WHERE NOT EXISTS (SELECT 1 FROM public.brand_settings);
 
--- 8. SEED: Default categories
+-- 9. MOCK DATA
 -- ============================================================
 
-INSERT INTO public.categories (name, icon, sort_order)
-SELECT v.name, v.icon, v.sort_order
-FROM (
-  VALUES
-    ('Starters', '🥗', 1),
-    ('Main Course', '🍽️', 2),
-    ('Pasta', '🍝', 3),
-    ('Desserts', '🍰', 4),
-    ('Beverages', '🥤', 5)
-) AS v(name, icon, sort_order)
-WHERE NOT EXISTS (
-  SELECT 1 FROM public.categories c WHERE c.name = v.name
-);
+INSERT INTO public.categories (id, name, icon, sort_order) VALUES
+('550e8400-e29b-41d4-a716-446655440000', 'Appetizers', '🥟', 0),
+('550e8400-e29b-41d4-a716-446655440001', 'Main Course', '🥩', 1),
+('550e8400-e29b-41d4-a716-446655440004', 'Pasta', '🍝', 2),
+('550e8400-e29b-41d4-a716-446655440002', 'Desserts', '🍰', 3),
+('550e8400-e29b-41d4-a716-446655440003', 'Beverages', '🥤', 4)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.menu_items (id, name, description, price, category_id, image_url, available, preparation_time) VALUES
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Truffle Burrata', 'Creamy burrata with black truffle, heirloom tomatoes & basil oil', 16.50, '550e8400-e29b-41d4-a716-446655440000', 'https://images.unsplash.com/photo-1541529086526-db283c563270?w=800&auto=format&fit=crop', true, 10),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'Grilled Octopus', 'Charred octopus, smoked paprika, crispy potatoes & chimichurri', 18.00, '550e8400-e29b-41d4-a716-446655440000', 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=800&auto=format&fit=crop', true, 15),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'Signature Wagyu Burger', 'Premium Wagyu beef patty, aged cheddar, caramelized onions, and secret sauce on a brioche bun.', 24.00, '550e8400-e29b-41d4-a716-446655440001', 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&auto=format&fit=crop', true, 20),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14', 'Wild Mushroom Risotto', 'Arborio rice cooked slowly with wild mushrooms, parmesan cheese, and fresh herbs.', 21.00, '550e8400-e29b-41d4-a716-446655440001', 'https://images.unsplash.com/photo-1476124369491-e7addf5db371?w=800&auto=format&fit=crop', true, 25),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a15', 'Pan-Seared Salmon', 'Atlantic salmon with roasted asparagus, baby potatoes, and a lemon butter sauce.', 26.00, '550e8400-e29b-41d4-a716-446655440001', 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=800&auto=format&fit=crop', true, 22),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a16', 'Lobster Linguine', 'Fresh lobster, cherry tomatoes, white wine & garlic', 36.00, '550e8400-e29b-41d4-a716-446655440004', 'https://images.unsplash.com/photo-1559410545-0bdcd187e0a6?w=800&auto=format&fit=crop', true, 18),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a17', 'Truffle Carbonara', 'Guanciale, pecorino, egg yolk, black truffle shavings', 24.00, '550e8400-e29b-41d4-a716-446655440004', 'https://images.unsplash.com/photo-1612459284970-e8f027596582?w=800&auto=format&fit=crop', true, 15),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a18', 'Molten Lava Cake', 'Warm chocolate cake with a gooey center, served with vanilla bean ice cream.', 9.00, '550e8400-e29b-41d4-a716-446655440002', 'https://images.unsplash.com/photo-1624353365286-3f8d62adda51?w=800&auto=format&fit=crop', true, 15),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a19', 'New York Cheesecake', 'Classic creamy cheesecake with a graham cracker crust and fresh berry compote.', 8.50, '550e8400-e29b-41d4-a716-446655440002', 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=800&auto=format&fit=crop', true, 10),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a20', 'Classic Mojito', 'Fresh mint leaves muddled with lime, sugar, and soda water. Refreshing and crisp.', 11.00, '550e8400-e29b-41d4-a716-446655440003', 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=800&auto=format&fit=crop', true, 5),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a21', 'Craft Iced Coffee', 'Single-origin cold brew topped with creamy oat milk and a touch of vanilla.', 6.50, '550e8400-e29b-41d4-a716-446655440003', 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=800&auto=format&fit=crop', true, 5)
+ON CONFLICT (id) DO NOTHING;

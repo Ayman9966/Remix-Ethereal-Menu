@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Clock, CheckCircle, ChefHat, Bell, Package, AlertCircle } from 'lucide-react';
 import type { Order } from '@/lib/menu-data';
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 
 export const Route = createFileRoute('/kitchen')({
   head: () => ({
@@ -150,7 +151,17 @@ function KitchenPage() {
                           <Button
                             className="mt-5 w-full"
                             variant={order.status === 'pending' ? 'default' : 'success'}
-                            onClick={() => updateOrder({ ...order, status: next })}
+                            onClick={() => {
+                              updateOrder({ ...order, status: next });
+                              const labels: Record<string, string> = {
+                                preparing: 'Cooking started',
+                                ready: 'Order is ready',
+                                ready_to_pickup: 'Order ready for pickup',
+                                served: 'Order served',
+                                picked: 'Order picked up'
+                              };
+                              toast.success(labels[next as string] || `Order updated to ${next}`);
+                            }}
                           >
                             {next === 'preparing' && 'Start Preparing'}
                             {(next === 'ready' || next === 'ready_to_pickup') && (order.orderType === 'takeaway' ? 'Ready to Pickup' : 'Mark Ready')}

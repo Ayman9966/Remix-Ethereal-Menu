@@ -10,6 +10,7 @@ import { loadFromStorage, saveToStorage } from './storage';
 export type SyncOperationType = 
   | 'UPSERT_ITEM' | 'DELETE_ITEM' 
   | 'UPSERT_CATEGORY' | 'DELETE_CATEGORY' 
+  | 'BULK_UPSERT_CATEGORIES'
   | 'UPSERT_BRAND' | 'CREATE_ORDER' | 'UPDATE_ORDER_STATUS';
 
 export interface SyncOperation {
@@ -130,6 +131,8 @@ class SyncEngine {
       case 'DELETE_ITEM':
         return deleteMenuItem(op.payload.id);
       case 'UPSERT_CATEGORY':
+        return upsertCategory(op.payload);
+      case 'BULK_UPSERT_CATEGORIES':
         return upsertCategory(op.payload);
       case 'DELETE_CATEGORY':
         return deleteCategory(op.payload.id);
