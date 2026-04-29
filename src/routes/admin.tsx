@@ -1086,6 +1086,28 @@ function BrandingTab() {
                     </div>
                   </div>
                 )}
+                {form.taxEnabled && (
+                  <div className="mt-3 flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={form.taxApplyDineIn} 
+                        onChange={e => setForm({ ...form, taxApplyDineIn: e.target.checked })}
+                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                      />
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase">Dine In</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={form.taxApplyTakeaway} 
+                        onChange={e => setForm({ ...form, taxApplyTakeaway: e.target.checked })}
+                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                      />
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase">Takeaway</span>
+                    </label>
+                  </div>
+                )}
               </div>
 
               {/* Service Charge Section */}
@@ -1134,6 +1156,28 @@ function BrandingTab() {
                         {form.serviceChargeType === 'percentage' ? '%' : form.currency}
                       </span>
                     </div>
+                  </div>
+                )}
+                {form.serviceChargeEnabled && (
+                  <div className="mt-3 flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={form.serviceChargeApplyDineIn} 
+                        onChange={e => setForm({ ...form, serviceChargeApplyDineIn: e.target.checked })}
+                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                      />
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase">Dine In</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={form.serviceChargeApplyTakeaway} 
+                        onChange={e => setForm({ ...form, serviceChargeApplyTakeaway: e.target.checked })}
+                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                      />
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase">Takeaway</span>
+                    </label>
                   </div>
                 )}
               </div>
@@ -1193,6 +1237,28 @@ function BrandingTab() {
                         {form.additionalFeeType === 'percentage' ? '%' : form.currency}
                       </span>
                     </div>
+                  </div>
+                )}
+                {form.additionalFeeEnabled && (
+                  <div className="mt-3 flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={form.additionalFeeApplyDineIn} 
+                        onChange={e => setForm({ ...form, additionalFeeApplyDineIn: e.target.checked })}
+                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                      />
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase">Dine In</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={form.additionalFeeApplyTakeaway} 
+                        onChange={e => setForm({ ...form, additionalFeeApplyTakeaway: e.target.checked })}
+                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                      />
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase">Takeaway</span>
+                    </label>
                   </div>
                 )}
               </div>

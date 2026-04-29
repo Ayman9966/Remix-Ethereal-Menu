@@ -39,6 +39,7 @@ function POSPage() {
   const defaultType = brand.orderingMode === 'takeaway' ? 'takeaway' : 'dine-in';
   const [orderType, setOrderType] = useState<'dine-in' | 'takeaway'>(defaultType);
   const [tableNumber, setTableNumber] = useState(1);
+  const [customerPhone, setCustomerPhone] = useState('');
   const [orderSent, setOrderSent] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -104,16 +105,19 @@ function POSPage() {
   const removeFromCart = (id: string) => setCart(prev => prev.filter(c => c.menuItem.id !== id));
 
   const subtotal = cart.reduce((sum, c) => sum + c.menuItem.price * c.quantity, 0);
-
-  const tax = brand.taxEnabled
+  
+  const shouldApplyTax = brand.taxEnabled && (orderType === 'dine-in' ? brand.taxApplyDineIn : brand.taxApplyTakeaway);
+  const tax = shouldApplyTax 
     ? (brand.taxType === 'percentage' ? (subtotal * (brand.taxRate / 100)) : brand.taxRate)
     : 0;
 
-  const serviceCharge = brand.serviceChargeEnabled
+  const shouldApplyServiceCharge = brand.serviceChargeEnabled && (orderType === 'dine-in' ? brand.serviceChargeApplyDineIn : brand.serviceChargeApplyTakeaway);
+  const serviceCharge = shouldApplyServiceCharge
     ? (brand.serviceChargeType === 'percentage' ? (subtotal * (brand.serviceChargeRate / 100)) : brand.serviceChargeRate)
     : 0;
 
-  const additionalFee = brand.additionalFeeEnabled
+  const shouldApplyAdditionalFee = brand.additionalFeeEnabled && (orderType === 'dine-in' ? brand.additionalFeeApplyDineIn : brand.additionalFeeApplyTakeaway);
+  const additionalFee = shouldApplyAdditionalFee
     ? (brand.additionalFeeType === 'percentage' ? (subtotal * (brand.additionalFeeAmount / 100)) : brand.additionalFeeAmount)
     : 0;
 
@@ -131,6 +135,7 @@ function POSPage() {
       status: 'pending' as const,
       orderType,
       tableNumber: orderType === 'dine-in' ? tableNumber : undefined,
+      customerPhone: orderType === 'takeaway' ? customerPhone : undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
       total,
@@ -158,6 +163,7 @@ function POSPage() {
     }
 
     setCart([]);
+    setCustomerPhone('');
     setOrderSent(true);
     setTimeout(() => setOrderSent(false), 2000);
   };
@@ -264,6 +270,20 @@ function POSPage() {
               <ShoppingCart className="h-5 w-5 text-primary" />
               <h2 className="font-display text-lg font-semibold">Order</h2>
             </div>
+            {orderType === 'dine-in' && canDineIn && (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Table</span>
+                <select
+                  value={tableNumber}
+                  onChange={e => setTableNumber(Number(e.target.value))}
+                  className="rounded-lg bg-surface-low px-2 py-1 text-xs font-bold text-foreground outline-none border border-border/10"
+                >
+                  {Array.from({ length: brand.totalTables ?? 20 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>{i + 1}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Order type toggle */}
@@ -288,19 +308,16 @@ function POSPage() {
             </div>
           )}
 
-          {/* Table selector — dine-in only */}
-          {orderType === 'dine-in' && canDineIn && (
-            <div className="mb-3 flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Table</span>
-              <select
-                value={tableNumber}
-                onChange={e => setTableNumber(Number(e.target.value))}
-                className="rounded-lg bg-surface-low px-3 py-1.5 text-sm font-medium text-foreground outline-none"
-              >
-                {Array.from({ length: brand.totalTables ?? 20 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>{i + 1}</option>
-                ))}
-              </select>
+          {orderType === 'takeaway' && (
+            <div className="mb-4 space-y-1.5">
+              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Customer Mobile</label>
+              <input
+                type="tel"
+                placeholder="Enter mobile number..."
+                value={customerPhone}
+                onChange={e => setCustomerPhone(e.target.value)}
+                className="w-full rounded-xl bg-surface-low px-4 py-2 text-sm font-medium text-foreground outline-none border border-border/10 focus:ring-1 focus:ring-primary/30 transition-all placeholder:text-muted-foreground/50"
+              />
             </div>
           )}
 
@@ -334,7 +351,7 @@ function POSPage() {
           </div>
 
           <div className="mt-4 pt-4 border-t border-border/10">
-            {brand.taxEnabled || brand.serviceChargeEnabled || brand.additionalFeeEnabled ? (
+            {shouldApplyTax || shouldApplyServiceCharge || shouldApplyAdditionalFee ? (
               <div 
                 className="flex items-center gap-2 mb-3 cursor-pointer group w-fit"
                 onClick={() => setShowSummary(!showSummary)}
@@ -357,7 +374,7 @@ function POSPage() {
                     <span className="font-medium text-foreground">{brand.currency}{subtotal.toFixed(2)}</span>
                   </div>
 
-                  {brand.taxEnabled && (
+                  {shouldApplyTax && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground flex items-center gap-1.5">
                         Tax {brand.taxType === 'percentage' && <span className="text-[10px] bg-muted px-1 rounded uppercase font-bold text-muted-foreground">{brand.taxRate}%</span>}
@@ -366,7 +383,7 @@ function POSPage() {
                     </div>
                   )}
 
-                  {brand.serviceChargeEnabled && (
+                  {shouldApplyServiceCharge && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground flex items-center gap-1.5">
                         Service {brand.serviceChargeType === 'percentage' && <span className="text-[10px] bg-muted px-1 rounded uppercase font-bold text-muted-foreground">{brand.serviceChargeRate}%</span>}
@@ -375,7 +392,7 @@ function POSPage() {
                     </div>
                   )}
 
-                  {brand.additionalFeeEnabled && (
+                  {shouldApplyAdditionalFee && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground flex items-center gap-1.5">
                         {brand.additionalFeeName} {brand.additionalFeeType === 'percentage' && <span className="text-[10px] bg-muted px-1 rounded uppercase font-bold text-muted-foreground">{brand.additionalFeeAmount}%</span>}
@@ -391,7 +408,12 @@ function POSPage() {
               <span className="text-base font-bold text-foreground">Total</span>
               <span className="font-display text-2xl font-bold text-primary">{brand.currency}{total.toFixed(2)}</span>
             </div>
-            <Button className="w-full mt-2" size="lg" onClick={sendOrder} disabled={cart.length === 0}>
+            <Button 
+              className="w-full mt-2" 
+              size="lg" 
+              onClick={sendOrder} 
+              disabled={cart.length === 0 || (orderType === 'takeaway' && !customerPhone.trim())}
+            >
               <Send className="h-4 w-4" />
               {orderSent ? 'Order Sent!' : 'Send to Kitchen'}
             </Button>
@@ -413,7 +435,7 @@ function POSPage() {
               <div className="flex items-center justify-between pb-4 border-b border-border/10">
                 <div className="space-y-1">
                   <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Order Items</p>
-                  <p className="text-sm font-medium text-foreground">{selectedOrder.orderType === 'takeaway' ? '📦 Takeaway' : `Table ${selectedOrder.tableNumber}`}</p>
+                  <p className="text-sm font-medium text-foreground">{selectedOrder.orderType === 'takeaway' ? (selectedOrder.customerPhone ? `📦 Takeaway (${selectedOrder.customerPhone})` : '📦 Takeaway') : `Table ${selectedOrder.tableNumber}`}</p>
                 </div>
                 <div className="text-right space-y-1">
                   <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Date & Time</p>
@@ -492,6 +514,12 @@ function POSPage() {
               <span>Type</span>
               <span className="capitalize">{selectedOrder.orderType}</span>
             </div>
+            {selectedOrder.customerPhone && (
+              <div className="flex justify-between">
+                <span>Phone</span>
+                <span className="font-bold">{selectedOrder.customerPhone}</span>
+              </div>
+            )}
           </div>
 
           <table className="w-full text-xs">

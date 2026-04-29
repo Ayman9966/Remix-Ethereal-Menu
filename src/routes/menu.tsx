@@ -51,6 +51,7 @@ function CustomerMenuPage() {
     : brand.orderingMode === 'takeaway' ? 'takeaway' : 'dine-in';
   const [orderType, setOrderType] = useState<'dine-in' | 'takeaway'>(defaultType);
   const [tableNumber, setTableNumber] = useState(lockedTable ?? 1);
+  const [customerPhone, setCustomerPhone] = useState(() => localStorage.getItem('savor_customer_phone') || '');
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [showMyOrders, setShowMyOrders] = useState(false);
   const [myOrderIds, setMyOrderIds] = useState<string[]>(() => {
@@ -72,6 +73,11 @@ function CustomerMenuPage() {
   useEffect(() => {
     localStorage.setItem('my_takeaway_orders', JSON.stringify(myOrderIds));
   }, [myOrderIds]);
+
+  // Save customerPhone to localStorage
+  useEffect(() => {
+    localStorage.setItem('savor_customer_phone', customerPhone);
+  }, [customerPhone]);
 
   // Handle migration from localId to realId (or cross-tab sync)
   useEffect(() => {
@@ -202,15 +208,18 @@ function CustomerMenuPage() {
 
   const subtotal = cart.reduce((sum, c) => sum + c.menuItem.price * c.quantity, 0);
   
-  const tax = brand.taxEnabled 
+  const shouldApplyTax = brand.taxEnabled && (orderType === 'dine-in' ? brand.taxApplyDineIn : brand.taxApplyTakeaway);
+  const tax = shouldApplyTax 
     ? (brand.taxType === 'percentage' ? (subtotal * (brand.taxRate / 100)) : brand.taxRate)
     : 0;
     
-  const serviceCharge = brand.serviceChargeEnabled
+  const shouldApplyServiceCharge = brand.serviceChargeEnabled && (orderType === 'dine-in' ? brand.serviceChargeApplyDineIn : brand.serviceChargeApplyTakeaway);
+  const serviceCharge = shouldApplyServiceCharge
     ? (brand.serviceChargeType === 'percentage' ? (subtotal * (brand.serviceChargeRate / 100)) : brand.serviceChargeRate)
     : 0;
     
-  const additionalFee = brand.additionalFeeEnabled
+  const shouldApplyAdditionalFee = brand.additionalFeeEnabled && (orderType === 'dine-in' ? brand.additionalFeeApplyDineIn : brand.additionalFeeApplyTakeaway);
+  const additionalFee = shouldApplyAdditionalFee
     ? (brand.additionalFeeType === 'percentage' ? (subtotal * (brand.additionalFeeAmount / 100)) : brand.additionalFeeAmount)
     : 0;
 
@@ -228,6 +237,7 @@ function CustomerMenuPage() {
       status: 'pending',
       orderType,
       tableNumber: orderType === 'dine-in' ? tableNumber : undefined,
+      customerPhone: orderType === 'takeaway' ? customerPhone : undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
       total,
@@ -649,6 +659,20 @@ function CustomerMenuPage() {
               </div>
             )}
 
+            {orderType === 'takeaway' && (
+              <div className="mb-4 space-y-1.5">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Mobile Number</label>
+                <input
+                  type="tel"
+                  placeholder="Enter your mobile number..."
+                  value={customerPhone}
+                  onChange={e => setCustomerPhone(e.target.value)}
+                  className="w-full rounded-xl bg-surface-low px-4 py-2 text-sm font-medium text-foreground outline-none border border-border/10 focus:ring-1 focus:ring-primary/30 transition-all placeholder:text-muted-foreground/50"
+                  required
+                />
+              </div>
+            )}
+
             {/* Table selector — only for dine-in */}
             {orderType === 'dine-in' && canDineIn && (
               <div className="mb-4 flex items-center gap-3 rounded-xl bg-surface-low p-3">
@@ -708,7 +732,7 @@ function CustomerMenuPage() {
                       <span className="font-medium text-foreground">{brand.currency}{subtotal.toFixed(2)}</span>
                     </div>
                     
-                    {brand.taxEnabled && (
+                    {shouldApplyTax && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground flex items-center gap-1.5">
                           Tax {brand.taxType === 'percentage' && <span className="text-[10px] bg-muted px-1 rounded uppercase font-bold text-muted-foreground">{brand.taxRate}%</span>}
@@ -717,7 +741,7 @@ function CustomerMenuPage() {
                       </div>
                     )}
                     
-                    {brand.serviceChargeEnabled && (
+                    {shouldApplyServiceCharge && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground flex items-center gap-1.5">
                           Service {brand.serviceChargeType === 'percentage' && <span className="text-[10px] bg-muted px-1 rounded uppercase font-bold text-muted-foreground">{brand.serviceChargeRate}%</span>}
@@ -726,7 +750,7 @@ function CustomerMenuPage() {
                       </div>
                     )}
                     
-                    {brand.additionalFeeEnabled && (
+                    {shouldApplyAdditionalFee && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground flex items-center gap-1.5">
                           {brand.additionalFeeName} {brand.additionalFeeType === 'percentage' && <span className="text-[10px] bg-muted px-1 rounded uppercase font-bold text-muted-foreground">{brand.additionalFeeAmount}%</span>}
@@ -750,7 +774,7 @@ function CustomerMenuPage() {
               </div>
               <button
                 onClick={placeOrder}
-                disabled={cart.length === 0}
+                disabled={cart.length === 0 || (orderType === 'takeaway' && !customerPhone.trim())}
                 className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 font-bold text-primary-foreground shadow-ambient transition-all hover:shadow-lg active:scale-[0.98] disabled:opacity-50"
               >
                 <Send className="h-4 w-4" />

@@ -124,7 +124,9 @@ function KitchenPage() {
                           <div className="flex items-center gap-3">
                             <span className="font-display text-lg font-bold text-primary">#{String(order.orderNumber ?? '?').padStart(3, '0')}</span>
                             <span className="text-sm text-muted-foreground">
-                              {order.orderType === 'takeaway' ? '📦 Takeaway' : `Table ${order.tableNumber}`}
+                              {order.orderType === 'takeaway' 
+                                ? (order.customerPhone ? `📦 Takeaway (${order.customerPhone})` : '📦 Takeaway') 
+                                : `Table ${order.tableNumber}`}
                             </span>
                             {isLate && (
                               <span className="flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-500">

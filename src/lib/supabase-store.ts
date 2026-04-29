@@ -53,6 +53,12 @@ type DbBrandSettings = {
   additional_fee_name?: string | null;
   additional_fee_amount?: number | string | null;
   additional_fee_type?: 'percentage' | 'fixed' | null;
+  tax_apply_dine_in?: boolean | null;
+  tax_apply_takeaway?: boolean | null;
+  service_charge_apply_dine_in?: boolean | null;
+  service_charge_apply_takeaway?: boolean | null;
+  additional_fee_apply_dine_in?: boolean | null;
+  additional_fee_apply_takeaway?: boolean | null;
 };
 
 type DbOrder = {
@@ -66,6 +72,7 @@ type DbOrder = {
   tax_amount?: number | string;
   service_charge_amount?: number | string;
   additional_fee_amount?: number | string;
+  customer_phone?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -147,6 +154,12 @@ function mapBrand(row: DbBrandSettings, nextOrderNumber: number): BrandSettings 
     additionalFeeName: row.additional_fee_name ?? defaultBrand.additionalFeeName,
     additionalFeeAmount: toNumber(row.additional_fee_amount ?? defaultBrand.additionalFeeAmount),
     additionalFeeType: row.additional_fee_type ?? defaultBrand.additionalFeeType,
+    taxApplyDineIn: row.tax_apply_dine_in ?? defaultBrand.taxApplyDineIn,
+    taxApplyTakeaway: row.tax_apply_takeaway ?? defaultBrand.taxApplyTakeaway,
+    serviceChargeApplyDineIn: row.service_charge_apply_dine_in ?? defaultBrand.serviceChargeApplyDineIn,
+    serviceChargeApplyTakeaway: row.service_charge_apply_takeaway ?? defaultBrand.serviceChargeApplyTakeaway,
+    additionalFeeApplyDineIn: row.additional_fee_apply_dine_in ?? defaultBrand.additionalFeeApplyDineIn,
+    additionalFeeApplyTakeaway: row.additional_fee_apply_takeaway ?? defaultBrand.additionalFeeApplyTakeaway,
     nextOrderNumber,
   };
 }
@@ -165,6 +178,7 @@ function mapOrder(order: DbOrder, items: OrderItem[]): Order {
     taxAmount: order.tax_amount ? toNumber(order.tax_amount) : undefined,
     serviceChargeAmount: order.service_charge_amount ? toNumber(order.service_charge_amount) : undefined,
     additionalFeeAmount: order.additional_fee_amount ? toNumber(order.additional_fee_amount) : undefined,
+    customerPhone: order.customer_phone ?? undefined,
     items,
   };
 }
@@ -200,7 +214,7 @@ export async function fetchBrandSettings(): Promise<BrandSettings> {
   const { data: brandRows, error: brandErr } = await supabase
     .from('brand_settings')
     .select(
-      'restaurant_name,tagline,accent_color,logo_url,hero_image_url,online_ordering_enabled,show_prep_time,menu_scale,currency,total_tables,ordering_mode,board_background_color,board_cycle_seconds,board_columns,board_show_photos,board_show_price,board_show_description,board_show_prep_time,auto_print_invoice,invoice_size,tax_enabled,tax_rate,tax_type,service_charge_enabled,service_charge_rate,service_charge_type,additional_fee_enabled,additional_fee_name,additional_fee_amount,additional_fee_type',
+      'restaurant_name,tagline,accent_color,logo_url,hero_image_url,online_ordering_enabled,show_prep_time,menu_scale,currency,total_tables,ordering_mode,board_background_color,board_cycle_seconds,board_columns,board_show_photos,board_show_price,board_show_description,board_show_prep_time,auto_print_invoice,invoice_size,tax_enabled,tax_rate,tax_type,service_charge_enabled,service_charge_rate,service_charge_type,additional_fee_enabled,additional_fee_name,additional_fee_amount,additional_fee_type,tax_apply_dine_in,tax_apply_takeaway,service_charge_apply_dine_in,service_charge_apply_takeaway,additional_fee_apply_dine_in,additional_fee_apply_takeaway',
     )
     .limit(1);
   let brandRow: DbBrandSettings | null = (brandRows?.[0] as DbBrandSettings) ?? null;
@@ -236,7 +250,7 @@ export async function fetchOrders(limit = 200): Promise<Order[]> {
 
   const { data: orderRows, error: orderErr } = await supabase
     .from('orders')
-    .select('id,order_number,status,order_type,table_number,total,subtotal,tax_amount,service_charge_amount,additional_fee_amount,created_at,updated_at')
+    .select('id,order_number,status,order_type,table_number,total,subtotal,tax_amount,service_charge_amount,additional_fee_amount,customer_phone,created_at,updated_at')
     .order('created_at', { ascending: false })
     .limit(limit);
   if (orderErr) throw orderErr;
@@ -302,6 +316,7 @@ export async function fetchBootstrapData(): Promise<{
           tax_amount: o.tax_amount,
           service_charge_amount: o.service_charge_amount,
           additional_fee_amount: o.additional_fee_amount,
+          customer_phone: o.customer_phone,
           created_at: o.created_at,
           updated_at: o.updated_at
         };
@@ -489,6 +504,12 @@ export async function upsertBrandSettings(brand: BrandSettings): Promise<void> {
     additional_fee_name: brand.additionalFeeName,
     additional_fee_amount: brand.additionalFeeAmount,
     additional_fee_type: brand.additionalFeeType,
+    tax_apply_dine_in: brand.taxApplyDineIn,
+    tax_apply_takeaway: brand.taxApplyTakeaway,
+    service_charge_apply_dine_in: brand.serviceChargeApplyDineIn,
+    service_charge_apply_takeaway: brand.serviceChargeApplyTakeaway,
+    additional_fee_apply_dine_in: brand.additionalFeeApplyDineIn,
+    additional_fee_apply_takeaway: brand.additionalFeeApplyTakeaway,
   };
   const legacyRow = {
     restaurant_name: brand.restaurantName,
@@ -539,8 +560,9 @@ export async function createOrder(order: Omit<Order, 'orderNumber'>): Promise<Or
       tax_amount: order.taxAmount ?? 0,
       service_charge_amount: order.serviceChargeAmount ?? 0,
       additional_fee_amount: order.additionalFeeAmount ?? 0,
+      customer_phone: order.customerPhone ?? null,
     })
-    .select('id,order_number,status,order_type,table_number,total,subtotal,tax_amount,service_charge_amount,additional_fee_amount,created_at,updated_at')
+    .select('id,order_number,status,order_type,table_number,total,subtotal,tax_amount,service_charge_amount,additional_fee_amount,customer_phone,created_at,updated_at')
     .single();
   if (orderErr) throw orderErr;
 

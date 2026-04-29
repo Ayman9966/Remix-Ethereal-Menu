@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
   tax_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
   service_charge_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
   additional_fee_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  customer_phone TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -74,7 +75,8 @@ ALTER TABLE public.orders
   ADD COLUMN IF NOT EXISTS subtotal NUMERIC(10, 2) NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS tax_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS service_charge_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS additional_fee_amount NUMERIC(10, 2) NOT NULL DEFAULT 0;
+  ADD COLUMN IF NOT EXISTS additional_fee_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS customer_phone TEXT;
 
 -- Order Items (join table)
 CREATE TABLE IF NOT EXISTS public.order_items (
@@ -118,10 +120,22 @@ CREATE TABLE IF NOT EXISTS public.brand_settings (
   additional_fee_name TEXT NOT NULL DEFAULT 'Processing Fee',
   additional_fee_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
   additional_fee_type TEXT NOT NULL DEFAULT 'fixed',
+  tax_apply_dine_in BOOLEAN NOT NULL DEFAULT true,
+  tax_apply_takeaway BOOLEAN NOT NULL DEFAULT true,
+  service_charge_apply_dine_in BOOLEAN NOT NULL DEFAULT true,
+  service_charge_apply_takeaway BOOLEAN NOT NULL DEFAULT false,
+  additional_fee_apply_dine_in BOOLEAN NOT NULL DEFAULT true,
+  additional_fee_apply_takeaway BOOLEAN NOT NULL DEFAULT true,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 ALTER TABLE public.brand_settings
+  ADD COLUMN IF NOT EXISTS tax_apply_dine_in BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS tax_apply_takeaway BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS service_charge_apply_dine_in BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS service_charge_apply_takeaway BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS additional_fee_apply_dine_in BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS additional_fee_apply_takeaway BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS board_background_color TEXT NOT NULL DEFAULT '#0a0d13',
   ADD COLUMN IF NOT EXISTS board_cycle_seconds INT NOT NULL DEFAULT 15,
   ADD COLUMN IF NOT EXISTS board_columns INT NOT NULL DEFAULT 3,

@@ -33,6 +33,7 @@ export interface Order {
   status: 'pending' | 'preparing' | 'ready' | 'served' | 'ready_to_pickup' | 'picked';
   orderType: 'dine-in' | 'takeaway';
   tableNumber?: number;
+  customerPhone?: string;
   createdAt: Date;
   updatedAt: Date;
   total: number;
@@ -88,6 +89,12 @@ export interface BrandSettings {
   additionalFeeName: string;
   additionalFeeAmount: number;
   additionalFeeType: 'percentage' | 'fixed';
+  taxApplyDineIn: boolean;
+  taxApplyTakeaway: boolean;
+  serviceChargeApplyDineIn: boolean;
+  serviceChargeApplyTakeaway: boolean;
+  additionalFeeApplyDineIn: boolean;
+  additionalFeeApplyTakeaway: boolean;
 }
 
 export const defaultBrand: BrandSettings = {
@@ -120,6 +127,12 @@ export const defaultBrand: BrandSettings = {
   additionalFeeName: 'Processing Fee',
   additionalFeeAmount: 0,
   additionalFeeType: 'fixed',
+  taxApplyDineIn: true,
+  taxApplyTakeaway: true,
+  serviceChargeApplyDineIn: true,
+  serviceChargeApplyTakeaway: false,
+  additionalFeeApplyDineIn: true,
+  additionalFeeApplyTakeaway: true,
 };
 
 export const defaultCategories: Category[] = [
