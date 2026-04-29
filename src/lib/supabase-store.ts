@@ -343,44 +343,6 @@ export async function fetchBootstrapData(): Promise<{
 
   const [categories, items] = await Promise.all([fetchCategories(), fetchMenuItems()]);
 
-  // Ensure we always have at least seeded categories and items in Supabase
-  if (categories.length === 0 && items.length === 0) {
-    const seededCats = defaultCategories.map(c => ({
-      name: c.name,
-      icon: c.icon,
-      sort_order: c.order
-    }));
-    await supabase.from('categories').insert(seededCats);
-    return await fetchBootstrapData();
-  }
-
-  if (categories.length > 0 && items.length === 0) {
-    const byName = new Map(categories.map((c) => [c.name.toLowerCase(), c.id]));
-    const seeded = defaultMenuItems
-      .map((i) => {
-        const fallbackCatName =
-          defaultCategories.find((c) => c.id === i.categoryId)?.name?.toLowerCase() ?? '';
-        const category_id = byName.get(fallbackCatName);
-        if (!category_id) return null;
-        return {
-          name: i.name,
-          description: i.description,
-          price: i.price,
-          category_id,
-          // Don't store Vite hashed asset URLs in the DB.
-          // If you want images persisted, use a real URL or Supabase Storage.
-          image_url: null,
-          available: i.available,
-          preparation_time: i.preparationTime,
-        };
-      })
-      .filter((x): x is NonNullable<typeof x> => Boolean(x));
-
-    if (seeded.length > 0) {
-      await supabase.from('menu_items').insert(seeded);
-      return await fetchBootstrapData();
-    }
-  }
   const [brand, orders] = await Promise.all([fetchBrandSettings(), fetchOrders()]);
 
   return { categories, items, brand, orders };
