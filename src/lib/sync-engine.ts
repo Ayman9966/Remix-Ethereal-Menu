@@ -75,6 +75,26 @@ class SyncEngine {
     return this.queue.length;
   }
 
+  private invalidateTimeout: number | null = null;
+  private async invalidateServerCache() {
+    // Debounce to avoid spamming the server during bulk updates
+    if (this.invalidateTimeout) window.clearTimeout(this.invalidateTimeout);
+    
+    this.invalidateTimeout = window.setTimeout(async () => {
+      try {
+        console.log('[sync] Invalidating server-side cache...');
+        const res = await fetch('/api/cache/invalidate', { method: 'POST' });
+        if (res.ok) {
+          console.log('[sync] Server-side cache invalidated successfully.');
+        }
+      } catch (err) {
+        console.error('[sync] Failed to invalidate server cache:', err);
+      } finally {
+        this.invalidateTimeout = null;
+      }
+    }, 1000);
+  }
+
   public async processQueue() {
     if (this.isProcessing || this.queue.length === 0 || !navigator.onLine) {
       this.notify();
@@ -103,6 +123,11 @@ class SyncEngine {
         // If success, remove from real queue
         this.queue = this.queue.filter(q => q.id !== op.id);
         this.save();
+
+        // Invalidate server cache if it's a menu/branding change
+        if (['UPSERT_ITEM', 'DELETE_ITEM', 'UPSERT_CATEGORY', 'DELETE_CATEGORY', 'BULK_UPSERT_CATEGORIES', 'UPSERT_BRAND'].includes(op.type)) {
+          this.invalidateServerCache();
+        }
       } catch (err) {
         console.error(`[sync] Operation ${op.id} failed:`, err);
         op.retryCount++;

@@ -735,18 +735,24 @@ function SettingsTab() {
                   <RotateCw className={`h-5 w-5 text-primary ${isClearing ? 'animate-spin' : ''}`} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-foreground">Clear Application Cache</p>
-                  <p className="text-xs text-muted-foreground">Forces the server to rebuild static data for users. Use this if updates aren't appearing correctly.</p>
+                  <p className="text-sm font-medium text-foreground">Server-Side Multi-User Cache</p>
+                  <p className="text-xs text-muted-foreground">The menu is cached for 5 minutes on the server for performance. It is now automatically cleared whenever you save changes.</p>
                 </div>
               </div>
-              <Button 
-                variant="outline" 
-                onClick={handleClearCache} 
-                disabled={isClearing}
-                className="rounded-xl border-primary/20 hover:bg-primary/10 h-10 px-6"
-              >
-                {isClearing ? 'Clearing...' : 'Clear Cache'}
-              </Button>
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500">
+                  <Check className="h-3 w-3" />
+                  Auto-Sync Active
+                </span>
+                <Button 
+                  variant="outline" 
+                  onClick={handleClearCache} 
+                  disabled={isClearing}
+                  className="rounded-xl border-primary/20 hover:bg-primary/10 h-10 px-6 shrink-0"
+                >
+                  {isClearing ? 'Clearing...' : 'Force Refresh'}
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
