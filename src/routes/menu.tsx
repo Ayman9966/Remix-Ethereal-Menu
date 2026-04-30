@@ -22,30 +22,20 @@ export const Route = createFileRoute('/menu')({
 });
 
 function CustomerMenuPage() {
-  const { items, categories, brand, orders, addOrder, callWaiter, waiterCalls } = useMenu();
+  const { items, categories, brand, orders, addOrder, callWaiter, waiterCalls, isLoading } = useMenu();
   const { table: lockedTable } = Route.useSearch();
   const [showCallWaiter, setShowCallWaiter] = useState(false);
   const [callTable, setCallTable] = useState(lockedTable ?? 1);
   const [now, setNow] = useState(() => Date.now());
+  const [splashFinished, setSplashFinished] = useState(false);
 
-  // Tick every second to update relative times and cooldowns
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const COOLDOWN_MS = 60_000;
-  const lastCallForTable = waiterCalls
-    .filter(c => c.tableNumber === callTable)
-    .reduce<number>((max, c) => Math.max(max, new Date(c.createdAt).getTime()), 0);
-  const cooldownRemaining = Math.max(0, Math.ceil((COOLDOWN_MS - (now - lastCallForTable)) / 1000));
-  const onCooldown = cooldownRemaining > 0 && lastCallForTable > 0;
-  const formatCountdown = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  // Core state hooks (must be before any conditional returns)
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [showCart, setShowCart] = useState(false);
+  
   const defaultType: 'dine-in' | 'takeaway' = lockedTable
     ? 'dine-in'
     : brand.orderingMode === 'takeaway' ? 'takeaway' : 'dine-in';
@@ -60,7 +50,21 @@ function CustomerMenuPage() {
   });
   const [labelsExpanded, setLabelsExpanded] = useState(true);
 
-  // Auto-collapse labels after 3 seconds whenever they are expanded
+  // Tick every second to update relative times and cooldowns
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (!isLoading && !splashFinished) {
+      // Small delay for smooth transition
+      const timer = setTimeout(() => setSplashFinished(true), 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, splashFinished]);
+
+  // UI behavior hooks
   useEffect(() => {
     if (!labelsExpanded) return;
     const timer = setTimeout(() => {
@@ -69,17 +73,14 @@ function CustomerMenuPage() {
     return () => clearTimeout(timer);
   }, [labelsExpanded]);
 
-  // Save myOrderIds to localStorage
   useEffect(() => {
     localStorage.setItem('my_takeaway_orders', JSON.stringify(myOrderIds));
   }, [myOrderIds]);
 
-  // Save customerPhone to localStorage
   useEffect(() => {
     localStorage.setItem('savor_customer_phone', customerPhone);
   }, [customerPhone]);
 
-  // Handle migration from localId to realId (or cross-tab sync)
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'my_takeaway_orders' && e.newValue) {
@@ -95,69 +96,42 @@ function CustomerMenuPage() {
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  // Filter active my orders (10min after picked, 3h limit overall)
   const myActiveOrders = useMemo(() => {
     const TEN_MINS = 10 * 60 * 1000;
     const THREE_HOURS = 3 * 60 * 60 * 1000;
-    const now = Date.now();
+    const currentNow = now; // using currentNow to avoid dependency on global state if it changes mid-render
     return orders.filter(o => {
       if (!myOrderIds.includes(o.id)) return false;
-      
-      const age = now - new Date(o.createdAt).getTime();
-      const ageSinceUpdate = now - new Date(o.updatedAt).getTime();
-      
-      // If order is not picked, keep it for up to 3 hours
-      if (o.status !== 'picked') {
-        return age < THREE_HOURS;
-      }
-      
-      // If order IS picked, keep it for 10 minutes after it was marked picked
+      const age = currentNow - new Date(o.createdAt).getTime();
+      const ageSinceUpdate = currentNow - new Date(o.updatedAt).getTime();
+      if (o.status !== 'picked') return age < THREE_HOURS;
       return ageSinceUpdate < TEN_MINS;
     });
-  }, [orders, myOrderIds]);
+  }, [orders, myOrderIds, now]);
 
-  const getRelativeTime = (date: Date) => {
-    const diff = Math.floor((now - new Date(date).getTime()) / 60000);
-    if (diff < 1) return 'just now';
-    if (diff < 60) return `${diff}m ago`;
-    return `${Math.floor(diff / 60)}h ${diff % 60}m ago`;
-  };
-
-  // Periodically clean up locally stored order IDs older than 3 hours
   useEffect(() => {
     const cleanup = () => {
       const THREE_HOURS = 3 * 60 * 60 * 1000;
-      const now = Date.now();
+      const currentNow = Date.now();
       setMyOrderIds(prev => {
         const filtered = prev.filter(id => {
-          // If it's a real order ID (UUID from server), it might not have the timestamp
-          // But our local IDs are ord-TIMESTAMP
           const parts = id.split('-');
           if (parts.length >= 2 && parts[0] === 'ord') {
             const timestamp = parseInt(parts[1]);
-            if (!isNaN(timestamp)) {
-              return (now - timestamp) < THREE_HOURS;
-            }
+            if (!isNaN(timestamp)) return (currentNow - timestamp) < THREE_HOURS;
           }
-          // For server UUIDs, check if we have the order in our current list
           const order = orders.find(o => o.id === id);
-          if (order) {
-            return (now - new Date(order.createdAt).getTime()) < THREE_HOURS;
-          }
-          // If we can't find it in orders and it's not our local format, 
-          // assume it's old and remove after some time (best effort)
+          if (order) return (currentNow - new Date(order.createdAt).getTime()) < THREE_HOURS;
           return true; 
         });
         return filtered.length !== prev.length ? filtered : prev;
       });
     };
-
     cleanup();
     const interval = setInterval(cleanup, 60000);
     return () => clearInterval(interval);
   }, [orders]);
 
-  // If the URL provides a table (e.g. from QR /t5), keep state locked to it
   useEffect(() => {
     if (lockedTable) {
       setTableNumber(lockedTable);
@@ -165,6 +139,78 @@ function CustomerMenuPage() {
       setOrderType('dine-in');
     }
   }, [lockedTable]);
+
+  const sortedCategories = useMemo(() => {
+    return [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [categories]);
+
+  // Conditional return for splash screen must be AFTER all hooks
+  if (isLoading || !splashFinished) {
+    return (
+      <motion.div 
+        key="splash"
+        initial={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.8, ease: "easeInOut" }}
+        className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background"
+      >
+        <div className="text-center px-6">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ 
+              duration: 1, 
+              ease: "easeOut",
+              repeat: Infinity,
+              repeatType: "reverse"
+            }}
+            className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10"
+          >
+            <UtensilsCrossed className="h-10 w-10 text-primary" />
+          </motion.div>
+          
+          <motion.h1 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="font-display text-4xl font-bold text-foreground"
+          >
+            {brand.restaurantName}
+          </motion.h1>
+          
+          <motion.p
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.8 }}
+            className="mt-3 text-muted-foreground"
+          >
+            {brand.tagline}
+          </motion.p>
+
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: "100%" }}
+            transition={{ delay: 0.6, duration: 2, ease: "easeInOut" }}
+            className="mt-12 h-1 w-48 mx-auto rounded-full bg-surface-low overflow-hidden"
+          >
+            <motion.div 
+              animate={{ x: ["-100%", "100%"] }}
+              transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+              className="h-full w-full bg-primary"
+            />
+          </motion.div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  const COOLDOWN_MS = 60_000;
+  const lastCallForTable = waiterCalls
+    .filter(c => c.tableNumber === callTable)
+    .reduce<number>((max, c) => Math.max(max, new Date(c.createdAt).getTime()), 0);
+  const cooldownRemaining = Math.max(0, Math.ceil((COOLDOWN_MS - (now - lastCallForTable)) / 1000));
+  const onCooldown = cooldownRemaining > 0 && lastCallForTable > 0;
+  const formatCountdown = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   const ordering = brand.onlineOrderingEnabled;
 
@@ -175,9 +221,12 @@ function CustomerMenuPage() {
     return true;
   });
 
-  const sortedCategories = useMemo(() => {
-    return [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
-  }, [categories]);
+  const getRelativeTime = (date: Date) => {
+    const diff = Math.floor((now - new Date(date).getTime()) / 60000);
+    if (diff < 1) return 'just now';
+    if (diff < 60) return `${diff}m ago`;
+    return `${Math.floor(diff / 60)}h ${diff % 60}m ago`;
+  };
 
   const grouped = activeCategory
     ? [{ category: categories.find(c => c.id === activeCategory)!, items: filtered.sort((a, b) => a.name.localeCompare(b.name)) }]
@@ -298,7 +347,7 @@ function CustomerMenuPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search menu..."
-            className="w-full rounded-2xl bg-card py-3.5 pl-11 pr-4 text-sm text-foreground shadow-ambient-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary"
+            className="w-full rounded-2xl bg-card py-3.5 pl-11 pr-4 text-base text-foreground shadow-ambient-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary"
           />
         </div>
 
@@ -568,7 +617,7 @@ function CustomerMenuPage() {
                 <select
                   value={callTable}
                   onChange={e => setCallTable(Number(e.target.value))}
-                  className="flex-1 rounded-lg bg-card px-3 py-2 text-sm font-medium text-foreground outline-none"
+                  className="flex-1 rounded-lg bg-card px-3 py-2 text-base font-medium text-foreground outline-none"
                 >
                   {Array.from({ length: brand.totalTables ?? 20 }, (_, i) => (
                     <option key={i + 1} value={i + 1}>Table {i + 1}</option>
@@ -667,7 +716,7 @@ function CustomerMenuPage() {
                   placeholder="Enter your mobile number..."
                   value={customerPhone}
                   onChange={e => setCustomerPhone(e.target.value)}
-                  className="w-full rounded-xl bg-surface-low px-4 py-2 text-sm font-medium text-foreground outline-none border border-border/10 focus:ring-1 focus:ring-primary/30 transition-all placeholder:text-muted-foreground/50"
+                  className="w-full rounded-xl bg-surface-low px-4 py-2 text-base font-medium text-foreground outline-none border border-border/10 focus:ring-1 focus:ring-primary/30 transition-all placeholder:text-muted-foreground/50"
                   required
                 />
               </div>
@@ -685,7 +734,7 @@ function CustomerMenuPage() {
                   <select
                     value={tableNumber}
                     onChange={e => setTableNumber(Number(e.target.value))}
-                    className="flex-1 rounded-lg bg-card px-3 py-1.5 text-sm font-medium text-foreground outline-none"
+                    className="flex-1 rounded-lg bg-card px-3 py-1.5 text-base font-medium text-foreground outline-none"
                   >
                     {Array.from({ length: brand.totalTables ?? 20 }, (_, i) => (
                       <option key={i + 1} value={i + 1}>{i + 1}</option>

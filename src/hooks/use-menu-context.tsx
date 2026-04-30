@@ -52,6 +52,7 @@ interface MenuContextType {
   setPosViewMode: (mode: 'pos' | 'history') => void;
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
   pendingChangesCount: number;
+  isLoading: boolean;
 }
 
 const MenuContext = createContext<MenuContextType | null>(null);
@@ -91,6 +92,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
   const [posViewMode, setPosViewMode] = useState<'pos' | 'history'>('pos');
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('synced');
   const [pendingChangesCount, setPendingChangesCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [syncQueue, setSyncQueue] = useState<any[]>([]); // To track pending mutations for merging
   const [recentlyCompleted, setRecentlyCompleted] = useState<Record<string, { status: string, timestamp: number }>>({});
   const { isOnline } = useOnlineStatus();
@@ -270,6 +272,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
         setCategories(data.categories);
         setItems(data.items);
         setBrand(data.brand);
+        setIsLoading(false);
         
         // Fetch remaining data in the background
         fetchAdditionalData().then(additional => {
@@ -545,6 +548,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       searchQuery, setSearchQuery,
       posViewMode, setPosViewMode,
       syncStatus, pendingChangesCount,
+      isLoading,
     }}>
       {children}
     </MenuContext.Provider>

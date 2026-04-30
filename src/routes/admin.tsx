@@ -387,31 +387,31 @@ function MenuItemsTab() {
           <div className="grid gap-4 py-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Name</label>
-              <input value={editing?.name ?? ''} onChange={e => setEditing(prev => prev ? { ...prev, name: e.target.value } : null)} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
+              <input value={editing?.name ?? ''} onChange={e => setEditing(prev => prev ? { ...prev, name: e.target.value } : null)} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-base outline-none focus:ring-2 focus:ring-primary" />
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Category</label>
-              <select value={editing?.categoryId ?? ''} onChange={e => setEditing(prev => prev ? { ...prev, categoryId: e.target.value } : null)} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary">
+              <select value={editing?.categoryId ?? ''} onChange={e => setEditing(prev => prev ? { ...prev, categoryId: e.target.value } : null)} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-base outline-none focus:ring-2 focus:ring-primary">
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div className="sm:col-span-2">
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Description</label>
-              <textarea value={editing?.description ?? ''} onChange={e => setEditing(prev => prev ? { ...prev, description: e.target.value } : null)} rows={2} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary resize-none" />
+              <textarea value={editing?.description ?? ''} onChange={e => setEditing(prev => prev ? { ...prev, description: e.target.value } : null)} rows={2} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-base outline-none focus:ring-2 focus:ring-primary resize-none" />
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Price ($)</label>
-              <input type="number" step="0.01" value={editing?.price ?? ''} onChange={e => setEditing(prev => prev ? { ...prev, price: parseFloat(e.target.value) || 0 } : null)} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
+              <input type="number" step="0.01" value={editing?.price ?? ''} onChange={e => setEditing(prev => prev ? { ...prev, price: parseFloat(e.target.value) || 0 } : null)} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-base outline-none focus:ring-2 focus:ring-primary" />
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Prep Time (min)</label>
-              <input type="number" value={editing?.preparationTime ?? ''} onChange={e => setEditing(prev => prev ? { ...prev, preparationTime: parseInt(e.target.value) || 0 } : null)} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
+              <input type="number" value={editing?.preparationTime ?? ''} onChange={e => setEditing(prev => prev ? { ...prev, preparationTime: parseInt(e.target.value) || 0 } : null)} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-base outline-none focus:ring-2 focus:ring-primary" />
             </div>
             <div className="sm:col-span-2">
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Image URL (optional)</label>
               <div className="flex items-center gap-3">
                 <ImageIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <input value={editing?.image ?? ''} onChange={e => setEditing(prev => prev ? { ...prev, image: e.target.value || undefined } : null)} placeholder="https://example.com/photo.jpg" className="flex-1 rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
+                <input value={editing?.image ?? ''} onChange={e => setEditing(prev => prev ? { ...prev, image: e.target.value || undefined } : null)} placeholder="https://example.com/photo.jpg" className="flex-1 rounded-xl bg-surface-low px-4 py-2.5 text-base outline-none focus:ring-2 focus:ring-primary" />
                 {editing?.image && <img src={editing.image} alt="" className="h-10 w-10 rounded-lg object-cover" />}
               </div>
             </div>
