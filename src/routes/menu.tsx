@@ -154,52 +154,114 @@ function CustomerMenuPage() {
         transition={{ duration: 0.8, ease: "easeInOut" }}
         className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background"
       >
-        <div className="text-center px-6">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ 
-              duration: 1, 
-              ease: "easeOut",
-              repeat: Infinity,
-              repeatType: "reverse"
-            }}
-            className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10"
-          >
-            <UtensilsCrossed className="h-10 w-10 text-primary" />
-          </motion.div>
-          
-          <motion.h1 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.8 }}
-            className="font-display text-4xl font-bold text-foreground"
-          >
-            {brand.restaurantName}
-          </motion.h1>
-          
-          <motion.p
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.8 }}
-            className="mt-3 text-muted-foreground"
-          >
-            {brand.tagline}
-          </motion.p>
-
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: "100%" }}
-            transition={{ delay: 0.6, duration: 2, ease: "easeInOut" }}
-            className="mt-12 h-1 w-48 mx-auto rounded-full bg-surface-low overflow-hidden"
-          >
+        <AnimatePresence mode="wait">
+          {isLoading ? (
             <motion.div 
-              animate={{ x: ["-100%", "100%"] }}
-              transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-              className="h-full w-full bg-primary"
-            />
-          </motion.div>
-        </div>
+              key="loading-stage"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex flex-col items-center"
+            >
+              <div className="relative mb-8 h-24 w-24">
+                <motion.div 
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                  className="absolute inset-0 rounded-full border-4 border-primary/10 border-t-primary"
+                />
+                <motion.div 
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                  className="absolute inset-4 rounded-full bg-primary/5 flex items-center justify-center"
+                >
+                  <UtensilsCrossed className="h-8 w-8 text-primary" />
+                </motion.div>
+              </div>
+              
+              <motion.h1 
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                className="font-display text-4xl font-medium tracking-tight text-foreground"
+              >
+                Welcome
+              </motion.h1>
+              
+              <motion.div 
+                className="mt-4 flex gap-1"
+                initial="initial"
+                animate="animate"
+              >
+                {[0, 1, 2].map((i) => (
+                  <motion.div
+                    key={i}
+                    variants={{
+                      initial: { opacity: 0.2, scale: 0.8 },
+                      animate: { opacity: 1, scale: 1 }
+                    }}
+                    transition={{
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      duration: 0.6,
+                      delay: i * 0.2
+                    }}
+                    className="h-1.5 w-1.5 rounded-full bg-primary"
+                  />
+                ))}
+              </motion.div>
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="brand-stage"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="text-center px-6"
+            >
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ 
+                  duration: 0.8, 
+                  ease: "easeOut"
+                }}
+                className="mb-8 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10"
+              >
+                <UtensilsCrossed className="h-10 w-10 text-primary" />
+              </motion.div>
+              
+              <motion.h1 
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
+                className="font-display text-4xl font-bold text-foreground"
+              >
+                {brand.restaurantName}
+              </motion.h1>
+              
+              <motion.p
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.6 }}
+                className="mt-3 text-muted-foreground"
+              >
+                {brand.tagline}
+              </motion.p>
+
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: "100%" }}
+                transition={{ delay: 0.5, duration: 1.5, ease: "easeInOut" }}
+                className="mt-12 h-1 w-48 mx-auto rounded-full bg-surface-low overflow-hidden"
+              >
+                <motion.div 
+                  animate={{ x: ["-100%", "100%"] }}
+                  transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                  className="h-full w-full bg-primary"
+                />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     );
   }
