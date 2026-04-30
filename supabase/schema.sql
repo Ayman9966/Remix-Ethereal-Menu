@@ -11,7 +11,13 @@
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_status') THEN
-    CREATE TYPE public.order_status AS ENUM ('pending', 'preparing', 'ready', 'served', 'ready_to_pickup', 'picked');
+    CREATE TYPE public.order_status AS ENUM ('awaiting_approval', 'pending', 'preparing', 'ready', 'served', 'ready_to_pickup', 'picked');
+  END IF;
+  -- If enum already exists but is missing the new value
+  IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_status') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_enum e JOIN pg_type t ON e.enumtypid = t.oid WHERE t.typname = 'order_status' AND e.enumlabel = 'awaiting_approval') THEN
+      ALTER TYPE public.order_status ADD VALUE 'awaiting_approval' BEFORE 'pending';
+    END IF;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_type') THEN
     CREATE TYPE public.order_type AS ENUM ('dine-in', 'takeaway');

@@ -3,7 +3,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { useMenu } from '@/hooks/use-menu-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { X, Send, Package, Bell, Check, Printer, ShoppingCart, Plus, Minus, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Send, Package, Bell, Check, Printer, ShoppingCart, Plus, Minus, ChevronDown, ChevronUp, ChevronRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { MenuItem, OrderItem, Order } from '@/lib/menu-data';
@@ -43,6 +43,7 @@ function POSPage() {
   const [orderSent, setOrderSent] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -74,6 +75,7 @@ function POSPage() {
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
+      awaiting_approval: 'Awaiting Approval',
       pending: 'New',
       preparing: 'Cooking',
       ready: 'Ready',
@@ -172,7 +174,8 @@ function POSPage() {
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       <AppHeader />
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <div className="w-full px-6 pt-4 shrink-0">
+        <div className="w-full px-6 pt-4 shrink-0 space-y-4">
+          <AwaitingApprovalIndicator onOpen={() => setShowApprovalDialog(true)} />
           <WaiterCallsPanel />
         </div>
         <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -492,6 +495,11 @@ function POSPage() {
         </DialogContent>
       </Dialog>
 
+      <ApprovalDialog 
+        open={showApprovalDialog} 
+        onOpenChange={setShowApprovalDialog} 
+      />
+
       {/* Hidden printable invoice */}
       {selectedOrder && (
         <div className={`printable-invoice ${brand.invoiceSize === '58mm' ? 'invoice-58mm' : 'invoice-80mm'}`} aria-hidden="true">
@@ -577,6 +585,198 @@ function POSPage() {
       )}
       </div>
     </div>
+  );
+}
+
+function AwaitingApprovalIndicator({ onOpen }: { onOpen: () => void }) {
+  const { orders, updateOrder, brand } = useMenu();
+  const awaiting = orders.filter((o) => o.status === 'awaiting_approval');
+  const prevCount = useRef(awaiting.length);
+
+  const playAlert = async () => {
+    try {
+      const Ctx = window.AudioContext ?? window.webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      await ctx.resume();
+      const now = ctx.currentTime;
+      [1046.5, 783.99].forEach((freq, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, now + i * 0.25);
+        g.gain.exponentialRampToValueAtTime(0.2, now + i * 0.25 + 0.05);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.25 + 0.5);
+        o.connect(g).connect(ctx.destination);
+        o.start(now + i * 0.25);
+        o.stop(now + i * 0.25 + 0.6);
+      });
+      setTimeout(() => ctx.close(), 2000);
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => {
+    if (awaiting.length > prevCount.current) {
+      void playAlert();
+      toast.info(`🛒 ${awaiting.length} New online orders awaiting approval!`, {
+        icon: '🛒',
+        duration: 8000,
+        action: {
+          label: 'View',
+          onClick: onOpen
+        }
+      });
+    }
+    prevCount.current = awaiting.length;
+  }, [awaiting.length, onOpen]);
+
+  if (awaiting.length === 0) return null;
+
+  return (
+    <button 
+      onClick={onOpen}
+      className="flex items-center gap-3 rounded-2xl bg-primary/10 px-4 py-2.5 shadow-ambient-sm border border-primary/20 hover:bg-primary/20 transition-all active:scale-95 group"
+    >
+      <div className="relative">
+        <ShoppingCart className="h-5 w-5 text-primary animate-pulse" />
+        <span className="absolute -top-1.5 -right-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-primary text-[10px] font-black text-primary-foreground border-2 border-background">
+          {awaiting.length}
+        </span>
+      </div>
+      <div className="text-left">
+        <h2 className="font-display text-sm font-black text-foreground">
+          Pending Approvals
+        </h2>
+        <p className="text-[10px] uppercase font-bold tracking-wider text-primary/70">
+          Click to review orders
+        </p>
+      </div>
+      <ChevronRight className="h-4 w-4 ml-6 text-primary/40 group-hover:translate-x-1 transition-transform" />
+    </button>
+  );
+}
+
+function ApprovalDialog({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
+  const { orders, updateOrder, brand } = useMenu();
+  const awaiting = orders.filter((o) => o.status === 'awaiting_approval');
+
+  const getRelativeTime = (d: Date) => {
+    const mins = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins === 1) return '1 min ago';
+    return `${mins} mins ago`;
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+        <div className="p-6 border-b shrink-0 bg-surface-low/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <ShoppingCart className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-black tracking-tight">
+                  Online Order Approvals
+                </DialogTitle>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">
+                  {awaiting.length} Orders awaiting confirmation
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={() => onOpenChange(false)}
+              className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-muted/20">
+          {awaiting.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="h-20 w-20 rounded-full bg-surface-low flex items-center justify-center mb-6">
+                <Check className="h-10 w-10 text-muted-foreground/30" />
+              </div>
+              <h3 className="text-base font-black text-foreground">Zero Pending Orders</h3>
+              <p className="text-sm font-bold text-muted-foreground max-w-[240px] mt-2">All online orders have been processed. Great job!</p>
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="mt-8 rounded-xl font-bold">Close Panel</Button>
+            </div>
+          ) : (
+            awaiting.map((order) => (
+              <div key={order.id} className="rounded-3xl bg-card border border-border/50 shadow-ambient-sm overflow-hidden group hover:border-primary/30 transition-colors">
+                <div className="p-5 flex items-center justify-between border-b bg-surface-low/30">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl font-display font-black gradient-primary text-primary-foreground text-lg shadow-ambient-sm">
+                      #{order.orderNumber}
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-foreground">
+                        {order.orderType === 'takeaway' ? '📦 Takeaway' : `🍽️ Table ${order.tableNumber}`}
+                      </h3>
+                      <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mt-1">
+                        Placed {getRelativeTime(new Date(order.createdAt))}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-black text-primary leading-none">
+                      {brand.currency}{order.total.toFixed(2)}
+                    </p>
+                    <p className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mt-1.5">
+                      {order.items.length} Items Summary
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="p-5 space-y-3">
+                  {order.items.map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-start">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-foreground">
+                          {item.quantity}x <span className="font-bold text-muted-foreground/80">{item.menuItem.name}</span>
+                        </p>
+                        {item.notes && (
+                          <p className="text-[11px] text-amber-600 bg-amber-50 px-2 py-1 rounded-lg mt-1 italic border border-amber-100/50 inline-block">
+                            "{item.notes}"
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-xs font-black text-muted-foreground/40">{brand.currency}{(item.menuItem.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="p-5 pt-0 flex gap-3">
+                  <Button 
+                    className="flex-1 h-12 rounded-2xl font-black text-sm shadow-ambient-sm hover:shadow-ambient transition-all active:scale-[0.98]" 
+                    onClick={() => {
+                      updateOrder({ ...order, status: 'pending' });
+                      toast.success(`Order #${order.orderNumber} approved and sent to kitchen!`);
+                    }}
+                  >
+                    Approve Order
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="h-12 px-6 rounded-2xl text-destructive hover:bg-destructive/10 font-black text-sm transition-colors"
+                    onClick={() => {
+                      updateOrder({ ...order, status: 'served' }); 
+                      toast.error(`Order #${order.orderNumber} dismissed.`);
+                    }}
+                  >
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

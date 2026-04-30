@@ -23,7 +23,7 @@ export interface Order {
   id: string;
   orderNumber: number;
   items: OrderItem[];
-  status: 'pending' | 'preparing' | 'ready' | 'served' | 'ready_to_pickup' | 'picked';
+  status: 'awaiting_approval' | 'pending' | 'preparing' | 'ready' | 'served' | 'ready_to_pickup' | 'picked';
   orderType: 'dine-in' | 'takeaway';
   tableNumber?: number;
   customerPhone?: string;

@@ -64,7 +64,7 @@ type DbBrandSettings = {
 type DbOrder = {
   id: string;
   order_number: number | null;
-  status: 'pending' | 'preparing' | 'ready' | 'served';
+  status: 'awaiting_approval' | 'pending' | 'preparing' | 'ready' | 'served' | 'ready_to_pickup' | 'picked';
   order_type: 'dine-in' | 'takeaway';
   table_number: number | null;
   total: number | string;

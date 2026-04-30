@@ -29,7 +29,7 @@ function KitchenPage() {
   }, []);
 
   const activeOrders = [...orders]
-    .filter(o => o.status !== 'served' && o.status !== 'picked')
+    .filter(o => o.status !== 'served' && o.status !== 'picked' && o.status !== 'awaiting_approval')
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   const pendingOrders = activeOrders.filter(o => o.status === 'pending');
   const preparingOrders = activeOrders.filter(o => o.status === 'preparing');
