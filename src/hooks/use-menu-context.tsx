@@ -54,6 +54,7 @@ interface MenuContextType {
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
   pendingChangesCount: number;
   isLoading: boolean;
+  isFirstEverLoad: boolean;
 }
 
 const MenuContext = createContext<MenuContextType | null>(null);
@@ -87,44 +88,60 @@ export function MenuProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const { isOnline } = useOnlineStatus();
 
-  // Queries (The "Caches")
-  const { data: categories = loadFromStorage('categories', defaultCategories), refetch: refetchCategories } = useQuery({
+  const categoriesQuery = useQuery({
     queryKey: ['categories'],
     queryFn: fetchCategories,
     initialData: () => loadFromStorage('categories', defaultCategories),
   });
+  const categories = categoriesQuery.data ?? defaultCategories;
 
-  const { data: items = loadFromStorage('items', defaultMenuItems), refetch: refetchItems } = useQuery({
+  const itemsQuery = useQuery({
     queryKey: ['items'],
     queryFn: fetchMenuItems,
     initialData: () => loadFromStorage('items', defaultMenuItems),
   });
+  const items = itemsQuery.data ?? defaultMenuItems;
 
-  const { data: brand = loadFromStorage('brand', defaultBrand), refetch: refetchBrand } = useQuery({
+  const brandQuery = useQuery({
     queryKey: ['brand'],
     queryFn: fetchBrandSettings,
     initialData: () => loadFromStorage('brand', defaultBrand),
   });
+  const brand = brandQuery.data ?? defaultBrand;
 
-  const { data: serverOrders = loadFromStorage('orders', sampleOrders), refetch: refetchOrders } = useQuery({
+  const ordersQuery = useQuery({
     queryKey: ['orders'],
     queryFn: () => fetchOrders(200),
     initialData: () => loadFromStorage('orders', sampleOrders),
-    refetchInterval: 30000, // Background poll every 30s as fallback
+    refetchInterval: 30000,
   });
+  const serverOrders = ordersQuery.data ?? sampleOrders;
 
-  const { data: waiterCalls = loadFromStorage('waiterCalls', []), refetch: refetchWaiterCalls } = useQuery({
+  const waiterCallsQuery = useQuery({
     queryKey: ['waiterCalls'],
     queryFn: fetchWaiterCalls,
     initialData: () => loadFromStorage('waiterCalls', []),
     refetchInterval: 20000,
   });
+  const waiterCalls = waiterCallsQuery.data ?? [];
 
-  const isLoading = 
-    queryClient.isFetching({ queryKey: ['categories'] }) > 0 ||
-    queryClient.isFetching({ queryKey: ['items'] }) > 0 ||
-    queryClient.isFetching({ queryKey: ['brand'] }) > 0 ||
-    queryClient.isFetching({ queryKey: ['orders'] }) > 0;
+  // isLoading should only be true if we don't have any cached data AND we are still fetching for the first time.
+  // We check if we have results in the cache first.
+  const hasCachedData = useRef(!!localStorage.getItem('savor_bootstrapped')).current;
+  
+  const isFirstEverLoad = !hasCachedData;
+  
+  const isLoading = isFirstEverLoad && (
+    categoriesQuery.isLoading || 
+    itemsQuery.isLoading || 
+    brandQuery.isLoading
+  );
+
+  useEffect(() => {
+    if (!categoriesQuery.isLoading && !itemsQuery.isLoading && !brandQuery.isLoading) {
+      localStorage.setItem('savor_bootstrapped', 'true');
+    }
+  }, [categoriesQuery.isLoading, itemsQuery.isLoading, brandQuery.isLoading]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [posViewMode, setPosViewMode] = useState<'pos' | 'history'>('pos');
@@ -532,6 +549,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       posViewMode, setPosViewMode,
       syncStatus, pendingChangesCount,
       isLoading,
+      isFirstEverLoad,
     }}>
       {children}
     </MenuContext.Provider>

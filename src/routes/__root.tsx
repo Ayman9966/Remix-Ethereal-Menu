@@ -1,9 +1,9 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { Outlet, Link, HeadContent, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import appCss from "../styles.css?url";
 import { MenuProvider } from "@/hooks/use-menu-context";
 import { registerServiceWorker } from "@/lib/sw-register";
 import { Toaster } from 'sonner';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient } from '@/lib/query-client';
 
@@ -29,7 +29,9 @@ function NotFoundComponent() {
   );
 }
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<{
+  queryClient: QueryClient
+}>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },

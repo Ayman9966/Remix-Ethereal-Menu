@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMenu } from '@/hooks/use-menu-context';
+import { fetchCategories, fetchMenuItems, fetchBrandSettings } from '@/lib/supabase-store';
 import { Search, Clock, UtensilsCrossed, Plus, Minus, ShoppingCart, X, Send, Check, Package, Bell, ChevronDown, ChevronUp, History, CheckCircle2, ChevronRight, Receipt, ChefHat, AlertCircle } from 'lucide-react';
 import { 
   Dialog,
@@ -13,6 +14,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import type { MenuItem, OrderItem, Order } from '@/lib/menu-data';
 
 export const Route = createFileRoute('/menu')({
+  loader: ({ context: { queryClient } }) => {
+    // Start prefetching immediately in the background
+    // We don't await to ensure the route finishes transition and shows the splash fast
+    queryClient.prefetchQuery({ queryKey: ['categories'], queryFn: fetchCategories });
+    queryClient.prefetchQuery({ queryKey: ['items'], queryFn: fetchMenuItems });
+    queryClient.prefetchQuery({ queryKey: ['brand'], queryFn: fetchBrandSettings });
+  },
   validateSearch: (search: Record<string, unknown>): { table?: number } => {
     const raw = search.table;
     const n = typeof raw === 'number' ? raw : typeof raw === 'string' ? parseInt(raw, 10) : NaN;
@@ -28,7 +36,7 @@ export const Route = createFileRoute('/menu')({
 });
 
 function CustomerMenuPage() {
-  const { items, categories, brand, orders, addOrder, callWaiter, waiterCalls, isLoading } = useMenu();
+  const { items, categories, brand, orders, addOrder, callWaiter, waiterCalls, isLoading, isFirstEverLoad } = useMenu();
   const { table: lockedTable } = Route.useSearch();
   const [showCallWaiter, setShowCallWaiter] = useState(false);
   const [callTable, setCallTable] = useState(lockedTable ?? 1);
@@ -64,11 +72,14 @@ function CustomerMenuPage() {
 
   useEffect(() => {
     if (!isLoading && !splashFinished) {
-      // Small delay for smooth transition
-      const timer = setTimeout(() => setSplashFinished(true), 1200);
+      // If we have data, we just wait long enough for the "Brand Stage" to be seen
+      // If it's a cached load (not first ever), we make it snappy (500ms)
+      // If it's the very first load, we give the user a second to soak in the brand (1000ms)
+      const delay = isFirstEverLoad ? 1200 : 400; 
+      const timer = setTimeout(() => setSplashFinished(true), delay);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, splashFinished]);
+  }, [isLoading, splashFinished, isFirstEverLoad]);
 
   // UI behavior hooks
   useEffect(() => {
@@ -220,14 +231,14 @@ function CustomerMenuPage() {
               key="brand-stage"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
               className="text-center px-6"
             >
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ 
-                  duration: 0.8, 
+                  duration: 0.6, 
                   ease: "easeOut"
                 }}
                 className="mb-8 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10"
@@ -236,18 +247,18 @@ function CustomerMenuPage() {
               </motion.div>
               
               <motion.h1 
-                initial={{ y: 20, opacity: 0 }}
+                initial={{ y: 15, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.6 }}
+                transition={{ delay: 0.1, duration: 0.4 }}
                 className="font-display text-4xl font-bold text-foreground"
               >
                 {brand.restaurantName}
               </motion.h1>
               
               <motion.p
-                initial={{ y: 20, opacity: 0 }}
+                initial={{ y: 15, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3, duration: 0.6 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
                 className="mt-3 text-muted-foreground"
               >
                 {brand.tagline}
@@ -256,7 +267,7 @@ function CustomerMenuPage() {
               <motion.div 
                 initial={{ width: 0 }}
                 animate={{ width: "100%" }}
-                transition={{ delay: 0.5, duration: 1.5, ease: "easeInOut" }}
+                transition={{ delay: 0.3, duration: 1, ease: "easeInOut" }}
                 className="mt-12 h-1 w-48 mx-auto rounded-full bg-surface-low overflow-hidden"
               >
                 <motion.div 
