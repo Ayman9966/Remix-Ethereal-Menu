@@ -451,58 +451,76 @@ function CustomerMenuPage() {
                   return (
                     <div
                       key={item.id}
-                      className="flex items-center gap-5 rounded-2xl bg-card p-5 shadow-ambient-sm transition-all duration-200 hover:shadow-ambient"
+                      className="group flex items-start gap-4 rounded-3xl bg-card p-4 shadow-ambient-sm transition-all duration-300 hover:shadow-ambient hover:-translate-y-0.5"
                     >
-                      {item.image && (
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          loading="lazy"
-                          width={512}
-                          height={512}
-                          className="h-20 w-20 shrink-0 rounded-xl object-cover"
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-display text-base font-semibold text-foreground">{item.name}</h3>
-                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
+                      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-surface-low">
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            loading="lazy"
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-muted-foreground/30">
+                            <UtensilsCrossed className="h-8 w-8" />
+                          </div>
+                        )}
+                        {!item.available && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px]">
+                            <span className="rounded-full bg-foreground px-2 py-1 text-[10px] font-bold text-background uppercase tracking-tight">Sold Out</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0 pt-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="font-display text-base font-bold text-foreground leading-snug line-clamp-1">{item.name}</h3>
+                        </div>
+                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground line-clamp-2">{item.description}</p>
+                        
                         <div className="mt-3 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className="font-display text-lg font-bold text-primary">{brand.currency}{item.price.toFixed(2)}</span>
-                            {brand.showPrepTime && (
-                              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Clock className="h-3 w-3" />
+                          <div className="flex items-baseline gap-2.5">
+                            <span className="font-display text-lg font-black text-primary leading-none">
+                              {brand.currency}{item.price.toFixed(2)}
+                            </span>
+                            {brand.showPrepTime && item.preparationTime > 0 && (
+                              <span className="flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider text-muted-foreground/50 border-l border-border/20 pl-2">
+                                <Clock className="h-2.5 w-2.5" />
                                 {item.preparationTime} min
                               </span>
                             )}
                           </div>
+
                           {ordering && (
-                            <>
+                            <div className="flex items-center">
                               {qty === 0 ? (
                                 <button
                                   onClick={() => addToCart(item)}
-                                  className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-ambient-sm transition-all hover:shadow-ambient active:scale-95"
+                                  disabled={!item.available}
+                                  className="flex h-10 px-4 items-center gap-2 rounded-2xl bg-primary text-primary-foreground font-bold text-sm shadow-ambient-sm transition-all hover:shadow-ambient active:scale-95 disabled:opacity-50 disabled:grayscale disabled:pointer-events-none"
                                 >
                                   <Plus className="h-4 w-4" />
+                                  <span>Add</span>
                                 </button>
                               ) : (
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-1 bg-surface-low rounded-2xl p-1 shadow-inner">
                                   <button
                                     onClick={() => updateQty(item.id, -1)}
-                                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-low text-foreground hover:bg-muted-foreground/20"
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-card text-foreground transition-colors hover:bg-muted-foreground/10 active:scale-90"
                                   >
-                                    <Minus className="h-3.5 w-3.5" />
+                                    <Minus className="h-4 w-4" />
                                   </button>
-                                  <span className="w-5 text-center text-sm font-semibold text-foreground">{qty}</span>
+                                  <span className="w-8 text-center text-sm font-black text-foreground">{qty}</span>
                                   <button
                                     onClick={() => updateQty(item.id, 1)}
-                                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-all hover:bg-primary-hover active:scale-90"
                                   >
-                                    <Plus className="h-3.5 w-3.5" />
+                                    <Plus className="h-4 w-4" />
                                   </button>
                                 </div>
                               )}
-                            </>
+                            </div>
                           )}
                         </div>
                       </div>
