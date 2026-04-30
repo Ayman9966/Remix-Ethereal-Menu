@@ -619,41 +619,41 @@ function AwaitingApprovalIndicator({ onOpen }: { onOpen: () => void }) {
   useEffect(() => {
     if (awaiting.length > prevCount.current) {
       void playAlert();
-      toast.info(`🛒 ${awaiting.length} New online orders awaiting approval!`, {
-        icon: '🛒',
-        duration: 8000,
-        action: {
-          label: 'View',
-          onClick: onOpen
-        }
-      });
     }
     prevCount.current = awaiting.length;
-  }, [awaiting.length, onOpen]);
+  }, [awaiting.length]);
 
   if (awaiting.length === 0) return null;
 
   return (
-    <button 
-      onClick={onOpen}
-      className="flex items-center gap-3 rounded-2xl bg-primary/10 px-4 py-2.5 shadow-ambient-sm border border-primary/20 hover:bg-primary/20 transition-all active:scale-95 group"
-    >
-      <div className="relative">
-        <ShoppingCart className="h-5 w-5 text-primary animate-pulse" />
-        <span className="absolute -top-1.5 -right-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-primary text-[10px] font-black text-primary-foreground border-2 border-background">
-          {awaiting.length}
-        </span>
-      </div>
-      <div className="text-left">
-        <h2 className="font-display text-sm font-black text-foreground">
-          Pending Approvals
-        </h2>
-        <p className="text-[10px] uppercase font-bold tracking-wider text-primary/70">
-          Click to review orders
-        </p>
-      </div>
-      <ChevronRight className="h-4 w-4 ml-6 text-primary/40 group-hover:translate-x-1 transition-transform" />
-    </button>
+    <div className="rounded-2xl overflow-hidden shadow-ambient border-2 border-primary/40">
+      <button 
+        onClick={onOpen}
+        className="w-full flex items-center justify-between gap-4 bg-primary/10 px-6 py-4 hover:bg-primary/20 transition-all active:scale-[0.99] group"
+      >
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <div className="absolute -inset-2 rounded-full bg-primary/20 animate-ping" />
+            <ShoppingCart className="h-6 w-6 text-primary relative z-10" />
+            <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-black text-primary-foreground border-2 border-background shadow-lg">
+              {awaiting.length}
+            </span>
+          </div>
+          <div className="text-left">
+            <h2 className="font-display text-lg font-black text-foreground leading-tight">
+              Action Required: {awaiting.length} New Online {awaiting.length === 1 ? 'Order' : 'Orders'}
+            </h2>
+            <p className="text-xs font-bold tracking-widest text-primary/80 uppercase mt-0.5">
+              Review and approve to send to kitchen
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest shadow-ambient-sm group-hover:scale-105 transition-transform">
+          Review Orders
+          <ChevronRight className="h-4 w-4" />
+        </div>
+      </button>
+    </div>
   );
 }
 

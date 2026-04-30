@@ -356,7 +356,6 @@ export function MenuProvider({ children }: { children: ReactNode }) {
           const path = window.location.pathname;
           if (path.includes('/pos') || path.includes('/admin') || path.includes('/kitchen')) {
             playDing();
-            toast.info(`🛒 New online order #${(payload.new as any).order_number ?? ''} awaiting approval!`);
           }
         }
         
