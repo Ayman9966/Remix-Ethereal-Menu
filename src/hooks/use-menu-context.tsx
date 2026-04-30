@@ -264,7 +264,12 @@ export function MenuProvider({ children }: { children: ReactNode }) {
 
   // Initial load from Supabase (fallback to localStorage/defaults)
   useEffect(() => {
-    if (!isSupabaseConfigured()) return;
+    if (!isSupabaseConfigured()) {
+      // If no Supabase, we just use what's in localStorage/defaults and finish loading quickly
+      const timer = setTimeout(() => setIsLoading(false), 500);
+      return () => clearTimeout(timer);
+    }
+    
     let cancelled = false;
     fetchBootstrapData()
       .then((data) => {
@@ -283,7 +288,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {
         // If Supabase isn't ready (schema not applied / RLS / network), keep local fallback
-        return;
+        if (!cancelled) setIsLoading(false);
       });
     return () => {
       cancelled = true;

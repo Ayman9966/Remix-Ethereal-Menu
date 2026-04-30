@@ -730,6 +730,18 @@ function SettingsTab() {
     }
   };
 
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const { clearStorage } = require('@/lib/storage'); // Dynamic import to avoid issues if needed, but let's just import it normally at top if possible
+
+  const handleReset = () => {
+    // We'll use the imported clearStorage
+    import('@/lib/storage').then(m => {
+      m.clearStorage();
+      toast.success("All local data cleared. Restarting...");
+      setTimeout(() => window.location.reload(), 1500);
+    });
+  };
+
   return (
     <div className="space-y-6 pb-20">
       <Card>
@@ -763,9 +775,49 @@ function SettingsTab() {
                 </Button>
               </div>
             </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-destructive/5 p-4 border border-destructive/10">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-destructive/10 p-2">
+                  <Trash2 className="h-5 w-5 text-destructive" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Reset to Factory Defaults</p>
+                  <p className="text-xs text-muted-foreground">Wipe all local settings and menu data. This cannot be undone.</p>
+                </div>
+              </div>
+              <Button 
+                variant="destructive" 
+                onClick={() => setShowResetDialog(true)}
+                className="rounded-xl h-10 px-6 shrink-0"
+              >
+                Reset Data
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will wipe all your local menu items, categories, and branding settings. 
+              Only data already synced to the server will remain in the cloud.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleReset}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Reset Everything
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
