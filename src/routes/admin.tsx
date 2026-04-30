@@ -731,10 +731,9 @@ function SettingsTab() {
   };
 
   const [showResetDialog, setShowResetDialog] = useState(false);
-  const { clearStorage } = require('@/lib/storage'); // Dynamic import to avoid issues if needed, but let's just import it normally at top if possible
 
   const handleReset = () => {
-    // We'll use the imported clearStorage
+    // We use dynamic import for storage utility
     import('@/lib/storage').then(m => {
       m.clearStorage();
       toast.success("All local data cleared. Restarting...");
