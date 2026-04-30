@@ -205,40 +205,7 @@ function POSPage() {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-      <AnimatePresence>
-        {awaiting_orders.length > 0 && (
-          <motion.div 
-            initial={{ y: -100 }}
-            animate={{ y: 0 }}
-            exit={{ y: -100 }}
-            className="absolute top-0 left-0 right-0 z-[100] pointer-events-auto"
-          >
-            <button 
-              onClick={() => setShowApprovalDialog(true)}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 px-6 shadow-2xl flex items-center justify-between gap-4 transition-colors group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="absolute -inset-2 rounded-full bg-white/20 animate-ping" />
-                  <ShoppingCart className="h-5 w-5 relative z-10" />
-                </div>
-                <div className="text-left">
-                  <span className="font-black text-sm uppercase tracking-tighter">
-                    Action Required: {awaiting_orders.length} New Online {awaiting_orders.length === 1 ? 'Order' : 'Orders'}
-                  </span>
-                  <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest leading-none">Review and approve to send to kitchen</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-widest group-hover:bg-white/30 transition-colors">
-                Open Approvals Panel
-                <ChevronRight className="h-3 w-3" />
-              </div>
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AppHeader />
+      <AppHeader onOpenApprovals={() => setShowApprovalDialog(true)} awaitingCount={awaiting_orders.length} />
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <div className="w-full px-6 pt-4 shrink-0 space-y-4">
           <WaiterCallsPanel />
@@ -682,12 +649,6 @@ function ApprovalDialog({ open, onOpenChange }: { open: boolean, onOpenChange: (
                 </p>
               </div>
             </div>
-            <button 
-              onClick={() => onOpenChange(false)}
-              className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
           </div>
         </div>
         

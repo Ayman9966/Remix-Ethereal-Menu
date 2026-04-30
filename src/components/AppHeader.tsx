@@ -1,5 +1,5 @@
 import { Link, useLocation } from '@tanstack/react-router';
-import { UtensilsCrossed, LayoutGrid, ChefHat, Menu as MenuIcon, Settings, X, Search, Cloud, CloudOff, RefreshCw } from 'lucide-react';
+import { UtensilsCrossed, LayoutGrid, ChefHat, Menu as MenuIcon, Settings, X, Search, Cloud, CloudOff, RefreshCw, ShoppingCart } from 'lucide-react';
 import { useState } from 'react';
 import { useMenu } from '@/hooks/use-menu-context';
 
@@ -40,7 +40,12 @@ function SyncStatusIndicator() {
   return null;
 }
 
-export function AppHeader() {
+interface AppHeaderProps {
+  onOpenApprovals?: () => void;
+  awaitingCount?: number;
+}
+
+export function AppHeader({ onOpenApprovals, awaitingCount = 0 }: AppHeaderProps) {
   const location = useLocation();
   const { brand, searchQuery, setSearchQuery, posViewMode, setPosViewMode } = useMenu();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -132,6 +137,27 @@ export function AppHeader() {
         </div>
 
         <div className="flex items-center gap-1">
+          {onOpenApprovals && (
+            <button
+              onClick={onOpenApprovals}
+              className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-90 ${
+                awaitingCount > 0 
+                  ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20' 
+                  : 'text-muted-foreground hover:bg-surface-low'
+              }`}
+              title={awaitingCount > 0 ? `${awaitingCount} Online Orders Awaiting Approval` : 'Online Order Approvals'}
+            >
+              {awaitingCount > 0 && (
+                <div className="absolute -inset-1 rounded-lg bg-amber-500/20 animate-pulse pointer-events-none" />
+              )}
+              <ShoppingCart className="h-5 w-5" />
+              {awaitingCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-600 text-[10px] font-black text-white border-2 border-background">
+                  {awaitingCount}
+                </span>
+              )}
+            </button>
+          )}
           <SyncStatusIndicator />
           <button
             onClick={() => setMobileOpen(!mobileOpen)}

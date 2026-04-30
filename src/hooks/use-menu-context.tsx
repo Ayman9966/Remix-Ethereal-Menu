@@ -322,7 +322,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       const id = window.setTimeout(() => {
         timers.delete(key);
         fn().catch(() => undefined);
-      }, 250);
+      }, 100);
       timers.set(key, id);
     };
 
@@ -350,15 +350,21 @@ export function MenuProvider({ children }: { children: ReactNode }) {
         });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-        // Immediate notification for insertions if possible, though we still refetch to get items
+        // Immediate notification for insertions if possible
         if (payload.eventType === 'INSERT' && (payload.new as any).status === 'awaiting_approval') {
-          // Only notify staff-facing routes
           const path = window.location.pathname;
           if (path.includes('/pos') || path.includes('/admin') || path.includes('/kitchen')) {
             playDing();
           }
         }
         
+        // If it's an update to a specific order we already have, we can update it locally immediately 
+        // to prevent flickering while we wait for the full refetch.
+        if (payload.eventType === 'UPDATE') {
+          const updated = payload.new as any;
+          setOrders(prev => prev.map(o => o.id === updated.id ? { ...o, status: updated.status } : o));
+        }
+
         schedule('orders', async () => {
           const next = await fetchOrders();
           if (!cancelled) setOrders(next);
@@ -378,7 +384,6 @@ export function MenuProvider({ children }: { children: ReactNode }) {
               const newOnes = next.filter(c => !c.acknowledged && !prev.some(p => p.id === c.id));
               if (newOnes.length > 0) {
                 playDing();
-                newOnes.forEach(c => toast.info(`🔔 Table ${c.tableNumber} needs a waiter`));
               }
               return next;
             });
@@ -443,7 +448,6 @@ export function MenuProvider({ children }: { children: ReactNode }) {
           const newOnes = next.filter(c => !c.acknowledged && !lastSeenIds.current.has(c.id));
           if (newOnes.length > 0) {
             playDing();
-            newOnes.forEach(c => toast.info(`🔔 Table ${c.tableNumber} needs a waiter`));
           }
           lastSeenIds.current = new Set(next.map(c => c.id));
           setWaiterCalls(next);
