@@ -349,7 +349,17 @@ export function MenuProvider({ children }: { children: ReactNode }) {
           if (!cancelled && Date.now() - lastMutationRef.current > 1500) setBrand(next);
         });
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+        // Immediate notification for insertions if possible, though we still refetch to get items
+        if (payload.eventType === 'INSERT' && (payload.new as any).status === 'awaiting_approval') {
+          // Only notify staff-facing routes
+          const path = window.location.pathname;
+          if (path.includes('/pos') || path.includes('/admin') || path.includes('/kitchen')) {
+            playDing();
+            toast.info(`🛒 New online order #${(payload.new as any).order_number ?? ''} awaiting approval!`);
+          }
+        }
+        
         schedule('orders', async () => {
           const next = await fetchOrders();
           if (!cancelled) setOrders(next);

@@ -266,34 +266,50 @@ export async function fetchOrders(limit = 200): Promise<Order[]> {
 
   const { data: orderRows, error: orderErr } = await supabase
     .from('orders')
-    .select('id,order_number,status,order_type,table_number,total,subtotal,tax_amount,service_charge_amount,additional_fee_amount,customer_phone,created_at,updated_at')
+    .select(`
+      id,
+      order_number,
+      status,
+      order_type,
+      table_number,
+      total,
+      subtotal,
+      tax_amount,
+      service_charge_amount,
+      additional_fee_amount,
+      customer_phone,
+      created_at,
+      updated_at,
+      order_items (
+        quantity,
+        notes,
+        unit_price,
+        menu_items (
+          id,
+          name,
+          description,
+          price,
+          category_id,
+          image_url,
+          available,
+          preparation_time
+        )
+      )
+    `)
     .order('created_at', { ascending: false })
     .limit(limit);
+
   if (orderErr) throw orderErr;
 
-  const orders: Order[] = [];
-  for (const o of (orderRows ?? []) as DbOrder[]) {
-    const { data: orderItemRows, error: oiErr } = await supabase
-      .from('order_items')
-      .select(
-        'quantity,notes,unit_price,menu_items(id,name,description,price,category_id,image_url,available,preparation_time,categories(id,name,icon,sort_order))',
-      )
-      .eq('order_id', o.id);
-    if (oiErr) throw oiErr;
+  return (orderRows ?? []).map((o: any) => {
+    const itemsForOrder: OrderItem[] = (o.order_items || []).map((r: any) => ({
+      quantity: r.quantity,
+      notes: r.notes ?? undefined,
+      menuItem: mapMenuItem(r.menu_items as DbMenuItem),
+    }));
 
-    const itemsForOrder: OrderItem[] = ((orderItemRows ?? []) as any[]).map((r) => {
-      const menuItemRaw = Array.isArray(r.menu_items) ? r.menu_items[0] : r.menu_items;
-      return {
-        quantity: r.quantity,
-        notes: r.notes ?? undefined,
-        menuItem: mapMenuItem(menuItemRaw as DbMenuItem),
-      };
-    });
-
-    orders.push(mapOrder(o, itemsForOrder));
-  }
-
-  return orders;
+    return mapOrder(o as DbOrder, itemsForOrder);
+  });
 }
 
 export async function fetchWaiterCalls(): Promise<WaiterCall[]> {
