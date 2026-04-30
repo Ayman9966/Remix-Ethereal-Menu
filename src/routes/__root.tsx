@@ -3,6 +3,9 @@ import appCss from "../styles.css?url";
 import { MenuProvider } from "@/hooks/use-menu-context";
 import { registerServiceWorker } from "@/lib/sw-register";
 import { Toaster } from 'sonner';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { queryClient } from '@/lib/query-client';
 
 function NotFoundComponent() {
   return (
@@ -57,9 +60,12 @@ function RootComponent() {
   }
 
   return (
-    <MenuProvider>
-      <Toaster richColors position="top-right" />
-      <Outlet />
-    </MenuProvider>
+    <QueryClientProvider client={queryClient}>
+      <MenuProvider>
+        <Toaster richColors position="top-right" />
+        <Outlet />
+      </MenuProvider>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   );
 }

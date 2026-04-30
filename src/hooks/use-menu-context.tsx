@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   type MenuItem, type Category, type Order, type BrandSettings, type WaiterCall,
   defaultMenuItems, defaultCategories, sampleOrders, defaultBrand,
@@ -83,30 +84,72 @@ function playDing() {
 }
 
 export function MenuProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<MenuItem[]>(() => loadFromStorage('items', defaultMenuItems));
-  const [categories, setCategories] = useState<Category[]>(() => loadFromStorage('categories', defaultCategories));
-  const [orders, setOrders] = useState<Order[]>(() => loadFromStorage('orders', sampleOrders));
-  const [brand, setBrand] = useState<BrandSettings>(() => loadFromStorage('brand', defaultBrand));
-  const [waiterCalls, setWaiterCalls] = useState<WaiterCall[]>(() => loadFromStorage('waiterCalls', [] as WaiterCall[]));
+  const queryClient = useQueryClient();
+  const { isOnline } = useOnlineStatus();
+
+  // Queries (The "Caches")
+  const { data: categories = loadFromStorage('categories', defaultCategories), refetch: refetchCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: fetchCategories,
+    initialData: () => loadFromStorage('categories', defaultCategories),
+  });
+
+  const { data: items = loadFromStorage('items', defaultMenuItems), refetch: refetchItems } = useQuery({
+    queryKey: ['items'],
+    queryFn: fetchMenuItems,
+    initialData: () => loadFromStorage('items', defaultMenuItems),
+  });
+
+  const { data: brand = loadFromStorage('brand', defaultBrand), refetch: refetchBrand } = useQuery({
+    queryKey: ['brand'],
+    queryFn: fetchBrandSettings,
+    initialData: () => loadFromStorage('brand', defaultBrand),
+  });
+
+  const { data: serverOrders = loadFromStorage('orders', sampleOrders), refetch: refetchOrders } = useQuery({
+    queryKey: ['orders'],
+    queryFn: () => fetchOrders(200),
+    initialData: () => loadFromStorage('orders', sampleOrders),
+    refetchInterval: 30000, // Background poll every 30s as fallback
+  });
+
+  const { data: waiterCalls = loadFromStorage('waiterCalls', []), refetch: refetchWaiterCalls } = useQuery({
+    queryKey: ['waiterCalls'],
+    queryFn: fetchWaiterCalls,
+    initialData: () => loadFromStorage('waiterCalls', []),
+    refetchInterval: 20000,
+  });
+
+  const isLoading = 
+    queryClient.isFetching({ queryKey: ['categories'] }) > 0 ||
+    queryClient.isFetching({ queryKey: ['items'] }) > 0 ||
+    queryClient.isFetching({ queryKey: ['brand'] }) > 0 ||
+    queryClient.isFetching({ queryKey: ['orders'] }) > 0;
+
   const [searchQuery, setSearchQuery] = useState('');
   const [posViewMode, setPosViewMode] = useState<'pos' | 'history'>('pos');
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('synced');
   const [pendingChangesCount, setPendingChangesCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [syncQueue, setSyncQueue] = useState<any[]>([]); // To track pending mutations for merging
+  const [syncQueue, setSyncQueue] = useState<any[]>([]); 
   const [recentlyCompleted, setRecentlyCompleted] = useState<Record<string, { status: string, timestamp: number }>>({});
-  const { isOnline } = useOnlineStatus();
-  const lastSeenIds = useRef<Set<string>>(new Set(waiterCalls.map(c => c.id)));
-
+  
+  const lastSeenIds = useRef<Set<string>>(new Set(waiterCalls.map((c: any) => c.id)));
   const lastMutationRef = useRef<number>(0);
-
   const syncQueueRef = useRef<any[]>([]);
   const isOnlineRef = useRef(isOnline);
+  
   useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
 
   const markMutation = useCallback(() => {
     lastMutationRef.current = Date.now();
   }, []);
+
+  // Persist query results back to localStorage for offline boot
+  useEffect(() => { if (categories) saveToStorage('categories', categories); }, [categories]);
+  useEffect(() => { if (items) saveToStorage('items', items); }, [items]);
+  useEffect(() => { if (brand) saveToStorage('brand', brand); }, [brand]);
+  useEffect(() => { if (serverOrders) saveToStorage('orders', serverOrders); }, [serverOrders]);
+  useEffect(() => { if (waiterCalls) saveToStorage('waiterCalls', waiterCalls); }, [waiterCalls]);
 
   // Helper to merge server data with pending local mutations
   const mergeWithPending = useCallback((serverOrders: Order[], currentQueue: any[], completed: Record<string, { status: string, timestamp: number }>) => {
@@ -176,7 +219,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     return finalOrders;
   }, []);
 
-  const mergedOrders = useMemo(() => mergeWithPending(orders, syncQueue, recentlyCompleted), [orders, syncQueue, recentlyCompleted, mergeWithPending]);
+  const mergedOrders = useMemo(() => mergeWithPending(serverOrders, syncQueue, recentlyCompleted), [serverOrders, syncQueue, recentlyCompleted, mergeWithPending]);
 
   // Listen to sync engine status
   useEffect(() => {
@@ -269,179 +312,58 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     }
   }, [isOnline]);
 
-  // Initial load from Supabase (fallback to localStorage/defaults)
-  useEffect(() => {
-    if (!isSupabaseConfigured()) {
-      // If no Supabase, we just use what's in localStorage/defaults and finish loading quickly
-      const timer = setTimeout(() => setIsLoading(false), 500);
-      return () => clearTimeout(timer);
-    }
-    
-    let cancelled = false;
-    fetchBootstrapData()
-      .then((data) => {
-        if (cancelled) return;
-        setCategories(data.categories);
-        setItems(data.items);
-        setBrand(data.brand);
-        setIsLoading(false);
-        
-        // Fetch remaining data in the background
-        fetchAdditionalData().then(additional => {
-          if (cancelled) return;
-          setOrders(additional.orders);
-          setWaiterCalls(additional.waiterCalls);
-        }).catch(console.error);
-      })
-      .catch(() => {
-        // If Supabase isn't ready (schema not applied / RLS / network), keep local fallback
-        if (!cancelled) setIsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   // Supabase Realtime: keep local state in sync across tabs/devices
   useEffect(() => {
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
     let cancelled = false;
-    const timers = new Map<string, number>();
-
-    const refetchAll = async () => {
-      const [essential, additional] = await Promise.all([
-        fetchBootstrapData(),
-        fetchAdditionalData()
-      ]);
-      if (cancelled) return;
-      setCategories(essential.categories);
-      setItems(essential.items);
-      setBrand(essential.brand);
-      setOrders(additional.orders);
-      setWaiterCalls(additional.waiterCalls);
-    };
-
-    const schedule = (key: string, fn: () => Promise<void>) => {
-      const existing = timers.get(key);
-      if (existing) window.clearTimeout(existing);
-      // Increased debounce for orders specifically to 1000ms, others 100ms
-      const delay = key === 'orders' ? 1000 : 100;
-      const id = window.setTimeout(() => {
-        timers.delete(key);
-        fn().catch(() => undefined);
-      }, delay);
-      timers.set(key, id);
-    };
 
     const channel = supabase
       .channel('savor-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
         if (Date.now() - lastMutationRef.current < 2000) return;
-        schedule('categories', async () => {
-          const next = await fetchCategories();
-          if (!cancelled && Date.now() - lastMutationRef.current > 1500) setCategories(next);
-        });
+        queryClient.invalidateQueries({ queryKey: ['categories'] });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, () => {
         if (Date.now() - lastMutationRef.current < 2000) return;
-        schedule('menu_items', async () => {
-          const next = await fetchMenuItems();
-          if (!cancelled && Date.now() - lastMutationRef.current > 1500) setItems(next);
-        });
+        queryClient.invalidateQueries({ queryKey: ['items'] });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'brand_settings' }, () => {
         if (Date.now() - lastMutationRef.current < 2000) return;
-        schedule('brand_settings', async () => {
-          const next = await fetchBrandSettings();
-          if (!cancelled && Date.now() - lastMutationRef.current > 1500) setBrand(next);
-        });
+        queryClient.invalidateQueries({ queryKey: ['brand'] });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-        // Immediate notification for insertions if possible
         if (payload.eventType === 'INSERT' && (payload.new as any).status === 'awaiting_approval') {
-          const path = window.location.pathname;
-          if (path.includes('/pos') || path.includes('/admin') || path.includes('/kitchen')) {
-            playDing();
-          }
+          playDing();
         }
-        
-        // If it's an update to a specific order we already have, we can update it locally immediately 
-        // to prevent flickering while we wait for the full refetch.
-        if (payload.eventType === 'UPDATE') {
-          const updated = payload.new as any;
-          setOrders(prev => prev.map(o => o.id === updated.id ? { 
-            ...o, 
-            status: updated.status,
-            updatedAt: new Date(updated.updated_at || Date.now())
-          } : o));
-        }
-
-        // Use same key 'orders' for both orders and order_items changes
-        schedule('orders', async () => {
-          const next = await fetchOrders();
-          if (!cancelled) setOrders(next);
-        });
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => {
-        // Use same key 'orders' to debounce with order changes
-        schedule('orders', async () => {
-          const next = await fetchOrders();
-          if (!cancelled) setOrders(next);
-        });
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'waiter_calls' }, () => {
-        schedule('waiter_calls', async () => {
-          const next = await fetchWaiterCalls();
-          if (!cancelled) {
-            setWaiterCalls(prev => {
-              const newOnes = next.filter(c => !c.acknowledged && !prev.some(p => p.id === c.id));
-              if (newOnes.length > 0) {
-                playDing();
-              }
-              return next;
-            });
-          }
-        });
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          // This helps confirm realtime is actually active on clients.
-          // (We keep it silent to avoid TV / kiosk noise.)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'waiter_calls' }, (payload) => {
+        if (payload.eventType === 'INSERT' && !(payload.new as any).acknowledged) {
+          playDing();
         }
-      });
+        queryClient.invalidateQueries({ queryKey: ['waiterCalls'] });
+      })
+      .subscribe();
 
-    // Fallback: when returning to tab / kiosk wakes up, re-hydrate from Supabase
     const onFocus = () => {
       if (document.visibilityState !== 'visible') return;
-      refetchAll().catch(() => undefined);
+      queryClient.invalidateQueries();
     };
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onFocus);
 
-    // Fallback polling (covers cases where Realtime isn't enabled/publishing)
-    const poll = window.setInterval(() => {
-      if (document.visibilityState !== 'visible') return;
-      refetchAll().catch(() => undefined);
-    }, 30_000);
-
     return () => {
       cancelled = true;
-      for (const id of timers.values()) window.clearTimeout(id);
-      window.clearInterval(poll);
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onFocus);
       supabase.removeChannel(channel);
     };
-  }, []);
-
-  // Persist to localStorage on every change
-  useEffect(() => { saveToStorage('items', items); }, [items]);
-  useEffect(() => { saveToStorage('categories', categories); }, [categories]);
-  useEffect(() => { saveToStorage('orders', orders); }, [orders]);
-  useEffect(() => { saveToStorage('brand', brand); }, [brand]);
-  useEffect(() => { saveToStorage('waiterCalls', waiterCalls); }, [waiterCalls]);
+  }, [queryClient]);
 
   // Cross-tab sync via storage event — admin tab hears calls from menu tab
   useEffect(() => {
@@ -465,7 +387,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
             playDing();
           }
           lastSeenIds.current = new Set(next.map(c => c.id));
-          setWaiterCalls(next);
+          queryClient.setQueryData(['waiterCalls'], next);
         } catch {
           return;
         }
@@ -473,63 +395,87 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
-  }, []);
+  }, [queryClient]);
 
   const addItem = useCallback((item: MenuItem) => {
     markMutation();
-    setItems(prev => [...prev, item]);
+    queryClient.setQueryData(['items'], (prev: MenuItem[] | undefined) => [...(prev || []), item]);
     syncEngine.enqueue('UPSERT_ITEM', item);
-  }, [markMutation]);
+  }, [markMutation, queryClient]);
+
   const updateItem = useCallback((item: MenuItem) => {
     markMutation();
-    setItems(prev => prev.map(i => i.id === item.id ? item : i));
+    queryClient.setQueryData(['items'], (prev: MenuItem[] | undefined) => 
+      prev?.map(i => i.id === item.id ? item : i) || [item]
+    );
     syncEngine.enqueue('UPSERT_ITEM', item);
-  }, [markMutation]);
+  }, [markMutation, queryClient]);
+
   const removeItem = useCallback((id: string) => {
     markMutation();
-    setItems(prev => prev.filter(i => i.id !== id));
+    queryClient.setQueryData(['items'], (prev: MenuItem[] | undefined) => 
+      prev?.filter(i => i.id !== id) || []
+    );
     syncEngine.enqueue('DELETE_ITEM', { id });
-  }, [markMutation]);
+  }, [markMutation, queryClient]);
+
   const addCategory = useCallback((cat: Category) => {
     markMutation();
-    setCategories(prev => [...prev, cat]);
+    queryClient.setQueryData(['categories'], (prev: Category[] | undefined) => [...(prev || []), cat]);
     syncEngine.enqueue('UPSERT_CATEGORY', cat);
-  }, [markMutation]);
+  }, [markMutation, queryClient]);
+
   const updateCategory = useCallback((cat: Category) => {
     markMutation();
-    setCategories(prev => prev.map(c => c.id === cat.id ? cat : c));
+    queryClient.setQueryData(['categories'], (prev: Category[] | undefined) => 
+      prev?.map(c => c.id === cat.id ? cat : c) || [cat]
+    );
     syncEngine.enqueue('UPSERT_CATEGORY', cat);
-  }, [markMutation]);
+  }, [markMutation, queryClient]);
+
   const removeCategory = useCallback((id: string) => {
     markMutation();
-    setCategories(prev => prev.filter(c => c.id !== id));
+    queryClient.setQueryData(['categories'], (prev: Category[] | undefined) => 
+      prev?.filter(c => c.id !== id) || []
+    );
     syncEngine.enqueue('DELETE_CATEGORY', { id });
-  }, [markMutation]);
+  }, [markMutation, queryClient]);
+
   const reorderCategories = useCallback((newCats: Category[]) => {
     markMutation();
-    setCategories(newCats);
+    queryClient.setQueryData(['categories'], newCats);
     syncEngine.enqueue('BULK_UPSERT_CATEGORIES', newCats);
-  }, [markMutation]);
+  }, [markMutation, queryClient]);
+
   const updateOrder = useCallback((order: Order) => {
-    setOrders((prev) => prev.map((o) => (o.id === order.id ? order : o)));
+    queryClient.setQueryData(['orders'], (prev: Order[] | undefined) => 
+      prev?.map((o) => (o.id === order.id ? order : o)) || [order]
+    );
     syncEngine.enqueue('UPDATE_ORDER_STATUS', { id: order.id, status: order.status });
-  }, []);
+  }, [queryClient]);
+
   const addOrder = useCallback((order: Omit<Order, 'orderNumber'>) => {
     const localId = `ord-${Date.now()}`;
     let optimisticOrderNumber = 1;
-    setBrand((prev) => {
+    
+    // We update the brand query data optimistically for the order number
+    queryClient.setQueryData(['brand'], (prev: BrandSettings | undefined) => {
+      if (!prev) return prev;
       optimisticOrderNumber = prev.nextOrderNumber ?? 1;
       return { ...prev, nextOrderNumber: optimisticOrderNumber + 1 };
     });
+
     const newOrder = { ...order, id: localId, orderNumber: optimisticOrderNumber } as Order;
-    setOrders((prevOrders) => [newOrder, ...prevOrders]);
+    
+    queryClient.setQueryData(['orders'], (prev: Order[] | undefined) => [newOrder, ...(prev || [])]);
     syncEngine.enqueue('CREATE_ORDER', order);
-  }, []);
+  }, [queryClient]);
+
   const updateBrand = useCallback((b: BrandSettings) => {
     markMutation();
-    setBrand(b);
+    queryClient.setQueryData(['brand'], b);
     syncEngine.enqueue('UPSERT_BRAND', b);
-  }, [markMutation]);
+  }, [markMutation, queryClient]);
 
   const callWaiter = useCallback((tableNumber: number) => {
     const COOLDOWN_MS = 60_000;
@@ -537,7 +483,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     let result = { ok: true, cooldownSeconds: 0 };
     
     // Check local cooldown first
-    const recent = waiterCalls.find(c =>
+    const recent = waiterCalls.find((c: any) =>
       c.tableNumber === tableNumber &&
       now - new Date(c.createdAt).getTime() < COOLDOWN_MS
     );
@@ -558,18 +504,22 @@ export function MenuProvider({ children }: { children: ReactNode }) {
   }, [waiterCalls]);
 
   const acknowledgeCall = useCallback((id: string) => {
-    setWaiterCalls(prev => prev.map(c => c.id === id ? { ...c, acknowledged: true } : c));
+    queryClient.setQueryData(['waiterCalls'], (prev: WaiterCall[] | undefined) => 
+      prev?.map(c => c.id === id ? { ...c, acknowledged: true } : c)
+    );
     updateWaiterCall(id, { acknowledged: true }).catch(err => {
       console.error('Failed to acknowledge call:', err);
     });
-  }, []);
+  }, [queryClient]);
 
   const clearCall = useCallback((id: string) => {
-    setWaiterCalls(prev => prev.filter(c => c.id !== id));
+    queryClient.setQueryData(['waiterCalls'], (prev: WaiterCall[] | undefined) => 
+      prev?.filter(c => c.id !== id)
+    );
     deleteWaiterCall(id).catch(err => {
       console.error('Failed to delete call:', err);
     });
-  }, []);
+  }, [queryClient]);
 
   return (
     <MenuContext.Provider value={{
