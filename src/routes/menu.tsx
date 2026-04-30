@@ -1,6 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMenu } from '@/hooks/use-menu-context';
-import { Search, Clock, UtensilsCrossed, Plus, Minus, ShoppingCart, X, Send, Check, Package, Bell, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Clock, UtensilsCrossed, Plus, Minus, ShoppingCart, X, Send, Check, Package, Bell, ChevronDown, ChevronUp, History, CheckCircle2, ChevronRight, Receipt, ChefHat } from 'lucide-react';
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from 'sonner';
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -35,6 +41,7 @@ function CustomerMenuPage() {
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [showCart, setShowCart] = useState(false);
+  const [selectedOrderDetail, setSelectedOrderDetail] = useState<Order | null>(null);
   
   const defaultType: 'dine-in' | 'takeaway' = lockedTable
     ? 'dine-in'
@@ -593,47 +600,47 @@ function CustomerMenuPage() {
                 <p className="py-8 text-center text-muted-foreground">No orders in progress.</p>
               ) : (
                 myActiveOrders.map((order: Order) => (
-                  <div key={order.id} className="rounded-2xl border border-border/50 bg-surface-low p-4">
-                    <div className="mb-3 flex items-center justify-between">
-                      <div>
-                        <span className="font-display text-lg font-bold text-primary">Order #{String(order.orderNumber).padStart(3, '0')}</span>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          <span>{getRelativeTime(order.createdAt)}</span>
+                  <motion.div 
+                    layout
+                    key={order.id} 
+                    className="overflow-hidden"
+                  >
+                    <div 
+                      className="flex w-full cursor-pointer items-center justify-between rounded-xl bg-surface-low p-4 transition-all hover:bg-surface-low/80 active:scale-[0.98] border border-border/50"
+                      onClick={() => setSelectedOrderDetail(order)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                          order.status === 'ready' || order.status === 'ready_to_pickup' ? 'bg-green-500/10 text-green-600' :
+                          order.status === 'preparing' ? 'bg-blue-500/10 text-blue-600' :
+                          'bg-muted-foreground/10 text-muted-foreground'
+                        }`}>
+                          {order.status === 'ready' || order.status === 'ready_to_pickup' ? <CheckCircle2 className="h-5 w-5" /> :
+                           order.status === 'preparing' ? <Clock className="h-5 w-5" /> :
+                           <History className="h-5 w-5" />}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-primary">Order #{String(order.orderNumber).padStart(3, '0')}</span>
+                            <span className={`h-1.5 w-1.5 rounded-full ${
+                              order.status === 'ready' || order.status === 'ready_to_pickup' ? 'bg-green-500 animate-pulse' :
+                              order.status === 'preparing' ? 'bg-blue-500 animate-pulse' :
+                              'bg-muted-foreground'
+                            }`} />
+                          </div>
+                          <p className="text-xs font-bold text-muted-foreground capitalize">
+                            {order.status.replace(/_/g, ' ')}
+                          </p>
                         </div>
                       </div>
-                      <div className={`rounded-xl px-3 py-1 text-xs font-bold uppercase tracking-wider ${
-                        order.status === 'ready_to_pickup' ? 'bg-success text-success-foreground animate-pulse' : 
-                        order.status === 'picked' ? 'bg-muted text-muted-foreground' : 'bg-primary/20 text-primary'
-                      }`}>
-                        {order.status === 'pending' && 'Received'}
-                        {order.status === 'preparing' && 'In Kitchen'}
-                        {order.status === 'ready_to_pickup' && 'Ready to Collect!'}
-                        {order.status === 'picked' && 'Picked Up'}
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <p className="text-[10px] font-medium text-muted-foreground">{getRelativeTime(new Date(order.createdAt))}</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
                       </div>
                     </div>
-                    
-                    <div className="flex flex-wrap gap-1">
-                      {order.items.map((item: any, i: number) => (
-                        <span key={i} className="rounded-lg bg-card px-2 py-1 text-[10px] font-medium text-muted-foreground">
-                          {item.quantity}x {item.menuItem.name}
-                        </span>
-                      ))}
-                    </div>
-
-                    {order.status === 'ready_to_pickup' && (
-                      <div className="mt-4 flex items-center gap-2 rounded-xl bg-success/10 p-3 text-xs font-medium text-success">
-                        <Package className="h-4 w-4" />
-                        Your food is ready! Please collect it from the counter.
-                      </div>
-                    )}
-                    {order.status === 'picked' && (
-                      <div className="mt-4 flex items-center gap-2 rounded-xl bg-primary/10 p-3 text-xs font-medium text-primary">
-                        <Check className="h-4 w-4" />
-                        Enjoy your meal!
-                      </div>
-                    )}
-                  </div>
+                  </motion.div>
                 ))
               )}
             </div>
@@ -913,6 +920,104 @@ function CustomerMenuPage() {
           </div>
         </>
       )}
+      {/* Order Detail Dialog */}
+      <Dialog open={!!selectedOrderDetail} onOpenChange={(open) => !open && setSelectedOrderDetail(null)}>
+        <DialogContent className="max-w-md gap-0 p-0 overflow-hidden border-none bg-surface-lowest">
+          {selectedOrderDetail && (
+            <div className="flex flex-col">
+              <div className={`p-6 bg-gradient-to-br transition-all duration-500 ${
+                selectedOrderDetail.status === 'ready' ? 'from-green-500 text-white' :
+                selectedOrderDetail.status === 'preparing' ? 'from-blue-600 text-white' :
+                'from-primary text-white'
+              }`}>
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h2 className="text-2xl font-black tracking-tight leading-tight">Order #{selectedOrderDetail.orderNumber}</h2>
+                    <p className="text-white/80 text-xs font-bold uppercase tracking-widest mt-1">
+                      {selectedOrderDetail.orderType === 'dine-in' ? `Table ${selectedOrderDetail.tableNumber}` : 'Takeaway'}
+                    </p>
+                  </div>
+                  <div className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full">
+                    <p className="text-xs font-black uppercase tracking-wider whitespace-nowrap">
+                      {selectedOrderDetail.status}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4 bg-black/10 backdrop-blur-sm p-4 rounded-2xl border border-white/10">
+                  <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                    {selectedOrderDetail.status === 'ready' ? <CheckCircle2 className="h-6 w-6" /> :
+                     selectedOrderDetail.status === 'preparing' ? <ChefHat className="h-6 w-6 animate-bounce" /> :
+                     <Receipt className="h-6 w-6" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-bold text-white/70 uppercase">Estimated Time</p>
+                    <p className="text-lg font-black">{selectedOrderDetail.status === 'ready' ? 'Ready to Pick Up' : '~15-20 min'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-surface-lowest flex-1 max-h-[60vh] overflow-y-auto p-6">
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/60 mb-4 flex items-center gap-2">
+                       <ShoppingCart className="h-3 w-3" />
+                       Items Summary
+                    </h3>
+                    <div className="space-y-4">
+                      {selectedOrderDetail.items.map((item, idx) => (
+                        <div key={idx} className="flex gap-4 group">
+                          <div className="h-12 w-12 shrink-0 rounded-xl bg-surface-low overflow-hidden border border-border/10">
+                            {item.menuItem?.image ? (
+                              <img src={item.menuItem.image} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                               <div className="h-full w-full flex items-center justify-center text-muted-foreground/20">
+                                 <UtensilsCrossed className="h-5 w-5" />
+                               </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start gap-2">
+                              <p className="text-sm font-black text-foreground leading-none">{item.menuItem?.name ?? 'Unknown Item'}</p>
+                              <p className="text-sm font-black text-primary">{brand.currency}{(item.menuItem.price * item.quantity).toFixed(2)}</p>
+                            </div>
+                            <p className="text-xs font-bold text-muted-foreground/80 mt-1.5">{item.quantity}x {brand.currency}{item.menuItem.price.toFixed(2)}</p>
+                            {item.notes && (
+                              <div className="mt-2 text-[11px] bg-amber-50/50 text-amber-700/80 p-2 rounded-lg italic border border-amber-200/20">
+                                "{item.notes}"
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-dashed border-border/40">
+                    <div className="flex justify-between items-center text-muted-foreground/60 mb-2">
+                       <p className="text-xs font-bold">Subtotal ({selectedOrderDetail.items.length} items)</p>
+                       <p className="text-xs font-black">{brand.currency}{selectedOrderDetail.total.toFixed(2)}</p>
+                    </div>
+                    <div className="flex justify-between items-center mb-6">
+                       <p className="text-sm font-black text-foreground">Total Paid</p>
+                       <p className="text-xl font-black text-primary">{brand.currency}{selectedOrderDetail.total.toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-6 pt-0">
+                <button 
+                  onClick={() => setSelectedOrderDetail(null)}
+                  className="w-full py-4 rounded-2xl bg-surface-low font-black text-sm text-foreground hover:bg-surface-low/80 active:scale-[0.98] transition-all"
+                >
+                  Close Details
+                </button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
