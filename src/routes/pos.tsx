@@ -34,6 +34,40 @@ export const Route = createFileRoute('/pos')({
 
 function POSPage() {
   const { items, categories, addOrder, brand, searchQuery, orders, posViewMode, setPosViewMode } = useMenu();
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const awaiting_orders = orders.filter((o) => o.status === 'awaiting_approval');
+  const prevCount = useRef(awaiting_orders.length);
+
+  const playAlert = async () => {
+    try {
+      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      await ctx.resume();
+      const now = ctx.currentTime;
+      [1046.5, 783.99].forEach((freq: number, i: number) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, now + i * 0.25);
+        g.gain.exponentialRampToValueAtTime(0.2, now + i * 0.25 + 0.05);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.25 + 0.5);
+        o.connect(g).connect(ctx.destination);
+        o.start(now + i * 0.25);
+        o.stop(now + i * 0.25 + 0.6);
+      });
+      setTimeout(() => ctx.close(), 2000);
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => {
+    if (awaiting_orders.length > prevCount.current) {
+      void playAlert();
+    }
+    prevCount.current = awaiting_orders.length;
+  }, [awaiting_orders.length]);
+
   const [activeCategory, setActiveCategory] = useState(categories[0]?.id ?? '');
   const [cart, setCart] = useState<OrderItem[]>([]);
   const defaultType = brand.orderingMode === 'takeaway' ? 'takeaway' : 'dine-in';
@@ -43,7 +77,6 @@ function POSPage() {
   const [orderSent, setOrderSent] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -171,11 +204,43 @@ function POSPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+      <AnimatePresence>
+        {awaiting_orders.length > 0 && (
+          <motion.div 
+            initial={{ y: -100 }}
+            animate={{ y: 0 }}
+            exit={{ y: -100 }}
+            className="absolute top-0 left-0 right-0 z-[100] pointer-events-auto"
+          >
+            <button 
+              onClick={() => setShowApprovalDialog(true)}
+              className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 px-6 shadow-2xl flex items-center justify-between gap-4 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="absolute -inset-2 rounded-full bg-white/20 animate-ping" />
+                  <ShoppingCart className="h-5 w-5 relative z-10" />
+                </div>
+                <div className="text-left">
+                  <span className="font-black text-sm uppercase tracking-tighter">
+                    Action Required: {awaiting_orders.length} New Online {awaiting_orders.length === 1 ? 'Order' : 'Orders'}
+                  </span>
+                  <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest leading-none">Review and approve to send to kitchen</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-widest group-hover:bg-white/30 transition-colors">
+                Open Approvals Panel
+                <ChevronRight className="h-3 w-3" />
+              </div>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AppHeader />
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <div className="w-full px-6 pt-4 shrink-0 space-y-4">
-          <AwaitingApprovalIndicator onOpen={() => setShowApprovalDialog(true)} />
           <WaiterCallsPanel />
         </div>
         <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -584,75 +649,6 @@ function POSPage() {
         </div>
       )}
       </div>
-    </div>
-  );
-}
-
-function AwaitingApprovalIndicator({ onOpen }: { onOpen: () => void }) {
-  const { orders, updateOrder, brand } = useMenu();
-  const awaiting = orders.filter((o) => o.status === 'awaiting_approval');
-  const prevCount = useRef(awaiting.length);
-
-  const playAlert = async () => {
-    try {
-      const Ctx = window.AudioContext ?? window.webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
-      await ctx.resume();
-      const now = ctx.currentTime;
-      [1046.5, 783.99].forEach((freq, i) => {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = 'sine';
-        o.frequency.value = freq;
-        g.gain.setValueAtTime(0.0001, now + i * 0.25);
-        g.gain.exponentialRampToValueAtTime(0.2, now + i * 0.25 + 0.05);
-        g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.25 + 0.5);
-        o.connect(g).connect(ctx.destination);
-        o.start(now + i * 0.25);
-        o.stop(now + i * 0.25 + 0.6);
-      });
-      setTimeout(() => ctx.close(), 2000);
-    } catch { /* ignore */ }
-  };
-
-  useEffect(() => {
-    if (awaiting.length > prevCount.current) {
-      void playAlert();
-    }
-    prevCount.current = awaiting.length;
-  }, [awaiting.length]);
-
-  if (awaiting.length === 0) return null;
-
-  return (
-    <div className="rounded-2xl overflow-hidden shadow-ambient border-2 border-primary/40">
-      <button 
-        onClick={onOpen}
-        className="w-full flex items-center justify-between gap-4 bg-primary/10 px-6 py-4 hover:bg-primary/20 transition-all active:scale-[0.99] group"
-      >
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <div className="absolute -inset-2 rounded-full bg-primary/20 animate-ping" />
-            <ShoppingCart className="h-6 w-6 text-primary relative z-10" />
-            <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-black text-primary-foreground border-2 border-background shadow-lg">
-              {awaiting.length}
-            </span>
-          </div>
-          <div className="text-left">
-            <h2 className="font-display text-lg font-black text-foreground leading-tight">
-              Action Required: {awaiting.length} New Online {awaiting.length === 1 ? 'Order' : 'Orders'}
-            </h2>
-            <p className="text-xs font-bold tracking-widest text-primary/80 uppercase mt-0.5">
-              Review and approve to send to kitchen
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest shadow-ambient-sm group-hover:scale-105 transition-transform">
-          Review Orders
-          <ChevronRight className="h-4 w-4" />
-        </div>
-      </button>
     </div>
   );
 }
