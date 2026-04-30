@@ -1,5 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { AppHeader } from '@/components/AppHeader';
+import { WaiterCallsDialog } from '@/components/WaiterCallsDialog';
+import { ApprovalDialog } from '@/components/ApprovalDialog';
 import { useMenu } from '@/hooks/use-menu-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -65,7 +67,12 @@ export const Route = createFileRoute('/admin')({
 type Tab = 'items' | 'categories' | 'branding' | 'qr' | 'analytics' | 'settings';
 
 function AdminPage() {
+  const { orders, waiterCalls } = useMenu();
   const [activeTab, setActiveTab] = useState<Tab>('analytics');
+  const [showWaiterCallsDialog, setShowWaiterCallsDialog] = useState(false);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const active_waiter_calls = waiterCalls.filter(c => !c.acknowledged);
+  const awaiting_orders_count = orders.filter(o => o.status === 'awaiting_approval').length;
 
   const tabs: { id: Tab; label: string; icon: any }[] = [
     { id: 'analytics', label: 'Analytics', icon: ShoppingCart },
@@ -78,12 +85,15 @@ function AdminPage() {
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
-      <AppHeader />
+      <AppHeader 
+        awaitingCount={awaiting_orders_count}
+        onOpenWaiterCalls={() => setShowWaiterCallsDialog(true)}
+        waiterCallsCount={active_waiter_calls.length}
+        onOpenApprovals={() => setShowApprovalDialog(true)}
+      />
       <div className="flex-1 overflow-auto w-full p-6">
         <h1 className="font-display text-2xl font-bold text-foreground">Admin Panel</h1>
         <p className="mt-1 text-sm text-muted-foreground">Manage your restaurant's menu, categories, and branding</p>
-
-        <WaiterCallsPanel />
 
         {/* Tabs */}
         <div className="mt-6 flex gap-2">
@@ -115,6 +125,14 @@ function AdminPage() {
           {activeTab === 'settings' && <SettingsTab />}
         </div>
       </div>
+      <WaiterCallsDialog 
+        open={showWaiterCallsDialog} 
+        onOpenChange={setShowWaiterCallsDialog} 
+      />
+      <ApprovalDialog
+        open={showApprovalDialog}
+        onOpenChange={setShowApprovalDialog}
+      />
     </div>
   );
 }
@@ -1352,88 +1370,6 @@ function BrandingTab() {
   );
 }
 
-function WaiterCallsPanel() {
-  const { waiterCalls, acknowledgeCall, clearCall } = useMenu();
-  const active = waiterCalls.filter(c => !c.acknowledged);
-  const prevCount = useRef(active.length);
-  const [, force] = useState(0);
-
-  // Re-render every 30s so timestamps stay fresh
-  useEffect(() => {
-    const id = setInterval(() => force(n => n + 1), 30000);
-    return () => clearInterval(id);
-  }, []);
-
-  // Sound + toast when a new call arrives in this same tab
-  useEffect(() => {
-    if (active.length > prevCount.current) {
-      try {
-        const Ctx = window.AudioContext ?? window.webkitAudioContext;
-        if (Ctx) {
-          const ctx = new Ctx();
-          const now = ctx.currentTime;
-          [880, 1320].forEach((freq, i) => {
-            const o = ctx.createOscillator();
-            const g = ctx.createGain();
-            o.type = 'sine';
-            o.frequency.value = freq;
-            g.gain.setValueAtTime(0.0001, now + i * 0.18);
-            g.gain.exponentialRampToValueAtTime(0.25, now + i * 0.18 + 0.02);
-            g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.18 + 0.45);
-            o.connect(g).connect(ctx.destination);
-            o.start(now + i * 0.18);
-            o.stop(now + i * 0.18 + 0.5);
-          });
-          setTimeout(() => ctx.close(), 1500);
-        }
-      } catch {
-        // ignore audio failures
-      }
-      const newest = active[active.length - 1];
-      if (newest) toast.info(`🔔 Table ${newest.tableNumber} needs a waiter`);
-    }
-    prevCount.current = active.length;
-  }, [active]);
-
-  if (active.length === 0) return null;
-
-  const formatAge = (d: Date) => {
-    const mins = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
-    if (mins < 1) return 'just now';
-    if (mins === 1) return '1 min ago';
-    return `${mins} mins ago`;
-  };
-
-  return (
-    <div className="mt-6 rounded-2xl bg-warning/10 p-5 shadow-ambient-sm">
-      <div className="mb-3 flex items-center gap-2">
-        <Bell className="h-5 w-5 text-warning animate-pulse" />
-        <h2 className="font-display text-base font-bold text-foreground">
-          {active.length} {active.length === 1 ? 'Table needs' : 'Tables need'} attention
-        </h2>
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {active.map(call => (
-          <div key={call.id} className="flex items-center gap-3 rounded-xl bg-card p-3 shadow-ambient-sm">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl gradient-primary text-primary-foreground font-display font-bold">
-              {call.tableNumber}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground">Table {call.tableNumber}</p>
-              <p className="text-xs text-muted-foreground">{formatAge(call.createdAt)}</p>
-            </div>
-            <Button size="sm" variant="success" onClick={() => acknowledgeCall(call.id)}>
-              <Check className="h-4 w-4" />
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => clearCall(call.id)}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function QrCodesTab() {
   const { brand } = useMenu();

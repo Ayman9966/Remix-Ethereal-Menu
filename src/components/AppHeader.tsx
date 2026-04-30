@@ -1,5 +1,5 @@
 import { Link, useLocation } from '@tanstack/react-router';
-import { UtensilsCrossed, LayoutGrid, ChefHat, Menu as MenuIcon, Settings, X, Search, Cloud, CloudOff, RefreshCw, ShoppingCart } from 'lucide-react';
+import { UtensilsCrossed, LayoutGrid, ChefHat, Menu as MenuIcon, Settings, X, Search, Cloud, CloudOff, RefreshCw, ShoppingCart, Bell } from 'lucide-react';
 import { useState } from 'react';
 import { useMenu } from '@/hooks/use-menu-context';
 
@@ -43,9 +43,17 @@ function SyncStatusIndicator() {
 interface AppHeaderProps {
   onOpenApprovals?: () => void;
   awaitingCount?: number;
+  onOpenWaiterCalls?: () => void;
+  waiterCallsCount?: number;
 }
 
-export function AppHeader({ onOpenApprovals, awaitingCount = 0 }: AppHeaderProps) {
+export function AppHeader(props: AppHeaderProps) {
+  const { 
+    onOpenApprovals, 
+    awaitingCount = 0, 
+    onOpenWaiterCalls, 
+    waiterCallsCount = 0 
+  } = props;
   const location = useLocation();
   const { brand, searchQuery, setSearchQuery, posViewMode, setPosViewMode } = useMenu();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -137,6 +145,27 @@ export function AppHeader({ onOpenApprovals, awaitingCount = 0 }: AppHeaderProps
         </div>
 
         <div className="flex items-center gap-1">
+          {onOpenWaiterCalls && (
+            <button
+              onClick={onOpenWaiterCalls}
+              className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-90 ${
+                waiterCallsCount > 0 
+                  ? 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20' 
+                  : 'text-muted-foreground hover:bg-surface-low'
+              }`}
+              title={waiterCallsCount > 0 ? `${waiterCallsCount} Tables Need Attention` : 'Table Attention'}
+            >
+              {waiterCallsCount > 0 && (
+                <div className="absolute -inset-1 rounded-lg bg-blue-500/20 animate-pulse pointer-events-none" />
+              )}
+              <Bell className="h-5 w-5" />
+              {waiterCallsCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-black text-white border-2 border-background">
+                  {waiterCallsCount}
+                </span>
+              )}
+            </button>
+          )}
           {onOpenApprovals && (
             <button
               onClick={onOpenApprovals}

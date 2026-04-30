@@ -1,5 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { AppHeader } from '@/components/AppHeader';
+import { ApprovalDialog } from '@/components/ApprovalDialog';
+import { WaiterCallsDialog } from '@/components/WaiterCallsDialog';
 import { useMenu } from '@/hooks/use-menu-context';
 import { Button } from '@/components/ui/button';
 import { Clock, CheckCircle, ChefHat, Bell, Package, AlertCircle } from 'lucide-react';
@@ -18,7 +20,11 @@ export const Route = createFileRoute('/kitchen')({
 });
 
 function KitchenPage() {
-  const { orders, updateOrder } = useMenu();
+  const { orders, updateOrder, waiterCalls } = useMenu();
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [showWaiterCallsDialog, setShowWaiterCallsDialog] = useState(false);
+  const active_waiter_calls = waiterCalls.filter(c => !c.acknowledged);
+  const awaiting_orders_count = orders.filter(o => o.status === 'awaiting_approval').length;
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -74,7 +80,12 @@ function KitchenPage() {
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
-      <AppHeader />
+      <AppHeader 
+        onOpenApprovals={() => setShowApprovalDialog(true)}
+        awaitingCount={awaiting_orders_count}
+        onOpenWaiterCalls={() => setShowWaiterCallsDialog(true)}
+        waiterCallsCount={active_waiter_calls.length}
+      />
       <div className="flex-1 overflow-auto w-full p-6">
         <div className="mb-8 flex items-center justify-between">
           <div>
@@ -179,6 +190,14 @@ function KitchenPage() {
           </div>
         )}
       </div>
+      <ApprovalDialog 
+        open={showApprovalDialog} 
+        onOpenChange={setShowApprovalDialog} 
+      />
+      <WaiterCallsDialog
+        open={showWaiterCallsDialog}
+        onOpenChange={setShowWaiterCallsDialog}
+      />
     </div>
   );
 }

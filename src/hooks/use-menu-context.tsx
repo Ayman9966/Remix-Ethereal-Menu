@@ -119,12 +119,19 @@ export function MenuProvider({ children }: { children: ReactNode }) {
         .filter(op => op.type === 'UPDATE_ORDER_STATUS' && op.payload.id === order.id)
         .sort((a, b) => b.timestamp - a.timestamp);
       
+      const recent = completed[order.id];
+
+      // CRITICAL: If server returns an order with 0 items, but we recently created it locally (or heard about it via INSERT),
+      // we prefer the data that has items to prevent flickering. 
+      if (order.items.length === 0 && recent && (recent as any).originalData?.items?.length > 0) {
+        return { ...(recent as any).originalData, status: pendingUpdates.length > 0 ? pendingUpdates[0].payload.status : order.status } as Order;
+      }
+
       if (pendingUpdates.length > 0) {
         return { ...order, status: pendingUpdates[0].payload.status };
       }
 
       // Check recently completed updates
-      const recent = completed[order.id];
       if (recent && now - recent.timestamp < 5000) {
         return { ...order, status: recent.status };
       }
@@ -319,10 +326,12 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     const schedule = (key: string, fn: () => Promise<void>) => {
       const existing = timers.get(key);
       if (existing) window.clearTimeout(existing);
+      // Increased debounce for orders specifically to 1000ms, others 100ms
+      const delay = key === 'orders' ? 1000 : 100;
       const id = window.setTimeout(() => {
         timers.delete(key);
         fn().catch(() => undefined);
-      }, 100);
+      }, delay);
       timers.set(key, id);
     };
 
@@ -362,16 +371,22 @@ export function MenuProvider({ children }: { children: ReactNode }) {
         // to prevent flickering while we wait for the full refetch.
         if (payload.eventType === 'UPDATE') {
           const updated = payload.new as any;
-          setOrders(prev => prev.map(o => o.id === updated.id ? { ...o, status: updated.status } : o));
+          setOrders(prev => prev.map(o => o.id === updated.id ? { 
+            ...o, 
+            status: updated.status,
+            updatedAt: new Date(updated.updated_at || Date.now())
+          } : o));
         }
 
+        // Use same key 'orders' for both orders and order_items changes
         schedule('orders', async () => {
           const next = await fetchOrders();
           if (!cancelled) setOrders(next);
         });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => {
-        schedule('order_items', async () => {
+        // Use same key 'orders' to debounce with order changes
+        schedule('orders', async () => {
           const next = await fetchOrders();
           if (!cancelled) setOrders(next);
         });

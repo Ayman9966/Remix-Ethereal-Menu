@@ -1,5 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { AppHeader } from '@/components/AppHeader';
+import { ApprovalDialog } from '@/components/ApprovalDialog';
+import { WaiterCallsDialog } from '@/components/WaiterCallsDialog';
 import { useMenu } from '@/hooks/use-menu-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,40 +35,11 @@ export const Route = createFileRoute('/pos')({
 });
 
 function POSPage() {
-  const { items, categories, addOrder, brand, searchQuery, orders, posViewMode, setPosViewMode } = useMenu();
+  const { items, categories, addOrder, brand, searchQuery, orders, waiterCalls, posViewMode, setPosViewMode } = useMenu();
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [showWaiterCallsDialog, setShowWaiterCallsDialog] = useState(false);
   const awaiting_orders = orders.filter((o) => o.status === 'awaiting_approval');
-  const prevCount = useRef(awaiting_orders.length);
-
-  const playAlert = async () => {
-    try {
-      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
-      await ctx.resume();
-      const now = ctx.currentTime;
-      [1046.5, 783.99].forEach((freq: number, i: number) => {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = 'sine';
-        o.frequency.value = freq;
-        g.gain.setValueAtTime(0.0001, now + i * 0.25);
-        g.gain.exponentialRampToValueAtTime(0.2, now + i * 0.25 + 0.05);
-        g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.25 + 0.5);
-        o.connect(g).connect(ctx.destination);
-        o.start(now + i * 0.25);
-        o.stop(now + i * 0.25 + 0.6);
-      });
-      setTimeout(() => ctx.close(), 2000);
-    } catch { /* ignore */ }
-  };
-
-  useEffect(() => {
-    if (awaiting_orders.length > prevCount.current) {
-      void playAlert();
-    }
-    prevCount.current = awaiting_orders.length;
-  }, [awaiting_orders.length]);
+  const active_waiter_calls = waiterCalls.filter(c => !c.acknowledged);
 
   const [activeCategory, setActiveCategory] = useState(categories[0]?.id ?? '');
   const [cart, setCart] = useState<OrderItem[]>([]);
@@ -204,12 +177,14 @@ function POSPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-      <AppHeader onOpenApprovals={() => setShowApprovalDialog(true)} awaitingCount={awaiting_orders.length} />
+    <div className="flex h-screen flex-col min-h-0 overflow-hidden relative bg-background">
+      <AppHeader 
+        onOpenApprovals={() => setShowApprovalDialog(true)} 
+        awaitingCount={awaiting_orders.length}
+        onOpenWaiterCalls={() => setShowWaiterCallsDialog(true)}
+        waiterCallsCount={active_waiter_calls.length}
+      />
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <div className="w-full px-6 pt-4 shrink-0 space-y-4">
-          <WaiterCallsPanel />
-        </div>
         <div className="flex-1 flex min-h-0 overflow-hidden">
         {posViewMode === 'history' ? (
           <div className="flex-1 overflow-auto p-6">
@@ -300,7 +275,7 @@ function POSPage() {
         </div>
 
         {/* Cart Sidebar */}
-        <div className="w-80 shrink-0 bg-card p-6 shadow-ambient flex flex-col lg:w-96">
+        <div className="w-80 shrink-0 bg-card p-6 border-l border-border/40 flex flex-col lg:w-96">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShoppingCart className="h-5 w-5 text-primary" />
@@ -532,6 +507,11 @@ function POSPage() {
         onOpenChange={setShowApprovalDialog} 
       />
 
+      <WaiterCallsDialog
+        open={showWaiterCallsDialog}
+        onOpenChange={setShowWaiterCallsDialog}
+      />
+
       {/* Hidden printable invoice */}
       {selectedOrder && (
         <div className={`printable-invoice ${brand.invoiceSize === '58mm' ? 'invoice-58mm' : 'invoice-80mm'}`} aria-hidden="true">
@@ -620,214 +600,3 @@ function POSPage() {
   );
 }
 
-function ApprovalDialog({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
-  const { orders, updateOrder, brand } = useMenu();
-  const awaiting = orders.filter((o) => o.status === 'awaiting_approval');
-
-  const getRelativeTime = (d: Date) => {
-    const mins = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
-    if (mins < 1) return 'just now';
-    if (mins === 1) return '1 min ago';
-    return `${mins} mins ago`;
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
-        <div className="p-6 border-b shrink-0 bg-surface-low/30">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <ShoppingCart className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <DialogTitle className="text-xl font-black tracking-tight">
-                  Online Order Approvals
-                </DialogTitle>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">
-                  {awaiting.length} Orders awaiting confirmation
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-muted/20">
-          {awaiting.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="h-20 w-20 rounded-full bg-surface-low flex items-center justify-center mb-6">
-                <Check className="h-10 w-10 text-muted-foreground/30" />
-              </div>
-              <h3 className="text-base font-black text-foreground">Zero Pending Orders</h3>
-              <p className="text-sm font-bold text-muted-foreground max-w-[240px] mt-2">All online orders have been processed. Great job!</p>
-              <Button variant="outline" onClick={() => onOpenChange(false)} className="mt-8 rounded-xl font-bold">Close Panel</Button>
-            </div>
-          ) : (
-            awaiting.map((order) => (
-              <div key={order.id} className="rounded-3xl bg-card border border-border/50 shadow-ambient-sm overflow-hidden group hover:border-primary/30 transition-colors">
-                <div className="p-5 flex items-center justify-between border-b bg-surface-low/30">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl font-display font-black gradient-primary text-primary-foreground text-lg shadow-ambient-sm">
-                      #{order.orderNumber}
-                    </div>
-                    <div>
-                      <h3 className="text-base font-black text-foreground">
-                        {order.orderType === 'takeaway' ? '📦 Takeaway' : `🍽️ Table ${order.tableNumber}`}
-                      </h3>
-                      <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mt-1">
-                        Placed {getRelativeTime(new Date(order.createdAt))}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xl font-black text-primary leading-none">
-                      {brand.currency}{order.total.toFixed(2)}
-                    </p>
-                    <p className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mt-1.5">
-                      {order.items.length} Items Summary
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="p-5 space-y-3">
-                  {order.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between items-start">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-foreground">
-                          {item.quantity}x <span className="font-bold text-muted-foreground/80">{item.menuItem.name}</span>
-                        </p>
-                        {item.notes && (
-                          <p className="text-[11px] text-amber-600 bg-amber-50 px-2 py-1 rounded-lg mt-1 italic border border-amber-100/50 inline-block">
-                            "{item.notes}"
-                          </p>
-                        )}
-                      </div>
-                      <span className="text-xs font-black text-muted-foreground/40">{brand.currency}{(item.menuItem.price * item.quantity).toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="p-5 pt-0 flex gap-3">
-                  <Button 
-                    className="flex-1 h-12 rounded-2xl font-black text-sm shadow-ambient-sm hover:shadow-ambient transition-all active:scale-[0.98]" 
-                    onClick={() => {
-                      updateOrder({ ...order, status: 'pending' });
-                      toast.success(`Order #${order.orderNumber} approved and sent to kitchen!`);
-                    }}
-                  >
-                    Approve Order
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    className="h-12 px-6 rounded-2xl text-destructive hover:bg-destructive/10 font-black text-sm transition-colors"
-                    onClick={() => {
-                      updateOrder({ ...order, status: 'served' }); 
-                      toast.error(`Order #${order.orderNumber} dismissed.`);
-                    }}
-                  >
-                    Reject
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function WaiterCallsPanel() {
-  const { waiterCalls, acknowledgeCall, clearCall } = useMenu();
-  const active = waiterCalls.filter((c) => !c.acknowledged);
-  const prevCount = useRef(active.length);
-  const [, force] = useState(0);
-
-  const playAlert = async () => {
-    try {
-      const Ctx = window.AudioContext ?? window.webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
-      // Some browsers keep fresh contexts suspended until resumed.
-      await ctx.resume();
-      const now = ctx.currentTime;
-      [880, 1320].forEach((freq, i) => {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = 'sine';
-        o.frequency.value = freq;
-        g.gain.setValueAtTime(0.0001, now + i * 0.18);
-        g.gain.exponentialRampToValueAtTime(0.25, now + i * 0.18 + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.18 + 0.45);
-        o.connect(g).connect(ctx.destination);
-        o.start(now + i * 0.18);
-        o.stop(now + i * 0.18 + 0.5);
-      });
-      setTimeout(() => ctx.close(), 1500);
-    } catch {
-      // ignore audio failures
-    }
-  };
-
-  useEffect(() => {
-    const id = window.setInterval(() => force((n) => n + 1), 30_000);
-    return () => window.clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    if (active.length > prevCount.current) {
-      void playAlert();
-      const newest = active[active.length - 1];
-      if (newest) toast.info(`🔔 Table ${newest.tableNumber} needs a waiter`);
-    }
-    prevCount.current = active.length;
-  }, [active]);
-
-  // Repeat "ding-ding" every 5s while there are active waiter calls.
-  useEffect(() => {
-    if (active.length === 0) return;
-    const id = window.setInterval(() => {
-      void playAlert();
-    }, 5000);
-    return () => window.clearInterval(id);
-  }, [active.length]);
-
-  if (active.length === 0) return null;
-
-  const formatAge = (d: Date) => {
-    const mins = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
-    if (mins < 1) return 'just now';
-    if (mins === 1) return '1 min ago';
-    return `${mins} mins ago`;
-  };
-
-  return (
-    <div className="rounded-2xl bg-warning/10 p-5 shadow-ambient-sm">
-      <div className="mb-3 flex items-center gap-2">
-        <Bell className="h-5 w-5 animate-pulse text-warning" />
-        <h2 className="font-display text-base font-bold text-foreground">
-          {active.length} {active.length === 1 ? 'Table needs' : 'Tables need'} attention
-        </h2>
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {active.map((call) => (
-          <div key={call.id} className="flex items-center gap-3 rounded-xl bg-card p-3 shadow-ambient-sm">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-display font-bold gradient-primary text-primary-foreground">
-              {call.tableNumber}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-foreground">Table {call.tableNumber}</p>
-              <p className="text-xs text-muted-foreground">{formatAge(call.createdAt)}</p>
-            </div>
-            <Button size="sm" variant="success" onClick={() => acknowledgeCall(call.id)}>
-              <Check className="h-4 w-4" />
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => clearCall(call.id)}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
