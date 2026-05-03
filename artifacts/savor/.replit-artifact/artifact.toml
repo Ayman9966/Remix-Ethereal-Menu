@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Savor — Restaurant Management"
+version = "1.0.0"
+id = "artifacts/savor"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 26038
+
+[services.development]
+run = "pnpm --filter @workspace/savor run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/savor", "run", "build" ]
+publicDir = "artifacts/savor/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26038"
+BASE_PATH = "/"
