@@ -7,7 +7,7 @@ import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { X, Send, Package, Bell, Check, Printer, ShoppingCart, Plus, Minus, ChevronDown, ChevronUp, WifiOff, MessageSquare } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import type { MenuItem, OrderItem, Order } from '@/lib/menu-data';
@@ -38,6 +38,7 @@ export const Route = createFileRoute('/pos')({
 
 function POSPage() {
   const { items, categories, addOrder, brand, searchQuery, orders, waiterCalls, posViewMode, setPosViewMode } = useMenu();
+  const categoryMap = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories]);
   const { isOnline } = useOnlineStatus();
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [showWaiterCallsDialog, setShowWaiterCallsDialog] = useState(false);
@@ -353,8 +354,15 @@ function POSPage() {
                 onClick={() => addToCart(item)}
               >
                 <CardContent className="p-0">
-                  {item.image && (
+                  {item.image ? (
                     <img src={item.image} alt={item.name} loading="lazy" width={128} height={128} className="h-14 w-full object-cover" />
+                  ) : (
+                    <div
+                      className="flex h-14 w-full items-center justify-center"
+                      style={{ background: `linear-gradient(135deg, ${brand.accentColor}28, ${brand.accentColor}0a)` }}
+                    >
+                      <span className="text-2xl select-none opacity-80">{categoryMap.get(item.categoryId)?.icon ?? '🍽️'}</span>
+                    </div>
                   )}
                   <div className="p-1.5 px-2">
                     <h4 className="font-display text-[10px] sm:text-[11px] font-semibold text-foreground line-clamp-1">{item.name}</h4>

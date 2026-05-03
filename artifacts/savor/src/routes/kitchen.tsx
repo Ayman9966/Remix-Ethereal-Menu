@@ -109,11 +109,22 @@ function KitchenPage() {
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-3">
-            {statusColumns.map((col) => (
+            {statusColumns.map((col) => {
+              const colStyle = col.title === 'New'
+                ? { dot: 'bg-amber-400', text: 'text-amber-600 dark:text-amber-400', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' }
+                : col.title === 'Cooking'
+                  ? { dot: 'bg-blue-400', text: 'text-blue-600 dark:text-blue-400', badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' }
+                  : { dot: 'bg-emerald-400', text: 'text-emerald-600 dark:text-emerald-400', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' };
+              return (
               <div key={col.title}>
-                <h3 className="mb-4 text-sm font-semibold text-muted-foreground">{col.title} ({col.orders.length})</h3>
+                <div className="mb-4 flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${colStyle.dot} shadow-sm`} />
+                  <h3 className={`text-sm font-bold tracking-wide ${colStyle.text}`}>{col.title}</h3>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${colStyle.badge}`}>{col.orders.length}</span>
+                </div>
                 <div className="space-y-4">
                   {col.orders.map(order => {
+
                     const config = statusConfig[order.status];
                     const next = nextStatus(order);
                     const elapsedMins = getElapsedMinutes(order.createdAt);
@@ -191,7 +202,8 @@ function KitchenPage() {
                   })}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

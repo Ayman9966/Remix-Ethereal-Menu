@@ -409,12 +409,20 @@ function CustomerMenuPage() {
         ) : (
           <div className="absolute inset-0 gradient-primary" />
         )}
-        <div className="relative px-4 py-16 text-center">
+        {/* radial accent glow */}
+        <div className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse 70% 80% at 50% 0%, ${brand.accentColor}33, transparent 70%)` }} />
+        {/* bottom fade into background */}
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent" />
+        <div className="relative px-4 pb-10 pt-14 text-center">
           <div className="w-full">
-            <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-foreground/10 backdrop-blur-sm">
-              <UtensilsCrossed className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <h1 className="font-display text-4xl font-bold text-primary-foreground">{brand.restaurantName}</h1>
+            {brand.logoUrl ? (
+              <img src={brand.logoUrl} alt={brand.restaurantName} className="mx-auto mb-4 h-14 w-14 rounded-2xl object-cover shadow-lg" />
+            ) : (
+              <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-foreground/15 shadow-inner backdrop-blur-sm ring-1 ring-primary-foreground/20">
+                <UtensilsCrossed className="h-7 w-7 text-primary-foreground" />
+              </div>
+            )}
+            <h1 className="font-display text-4xl font-bold text-primary-foreground drop-shadow-sm">{brand.restaurantName}</h1>
             <p className="mt-2 text-primary-foreground/70">{brand.tagline}</p>
           </div>
         </div>
@@ -481,8 +489,11 @@ function CustomerMenuPage() {
                             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center text-muted-foreground/30">
-                            <UtensilsCrossed className="h-8 w-8" />
+                          <div
+                            className="flex h-full w-full items-center justify-center"
+                            style={{ background: `linear-gradient(135deg, ${brand.accentColor}28, ${brand.accentColor}0a)` }}
+                          >
+                            <span className="text-3xl opacity-75 select-none">{category.icon}</span>
                           </div>
                         )}
                         {!item.available && (
