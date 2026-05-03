@@ -51,6 +51,19 @@ function POSPage() {
     }
   }, [categories, activeCategory]);
 
+  // Auto-print: fires after printingOrder is set and invoice DOM is painted
+  useEffect(() => {
+    if (!printingOrder) return;
+    // Double rAF ensures two paint cycles — invoice is guaranteed rendered
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.print();
+        setPrintingOrder(null);
+      });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [printingOrder]);
+
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const defaultType = brand.orderingMode === 'takeaway' ? 'takeaway' : 'dine-in';
@@ -60,6 +73,7 @@ function POSPage() {
   const [orderSent, setOrderSent] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -190,11 +204,7 @@ function POSPage() {
         ...orderData,
         orderNumber: optimisticOrderNumber,
       };
-      setSelectedOrder(printableOrder);
-      setTimeout(() => {
-        window.print();
-        setSelectedOrder(null);
-      }, 500);
+      setPrintingOrder(printableOrder);
     }
 
     setCart([]);
@@ -580,89 +590,141 @@ function POSPage() {
         onOpenChange={setShowWaiterCallsDialog}
       />
 
-      {/* Hidden printable invoice */}
-      {selectedOrder && (
-        <div className={`printable-invoice ${brand.invoiceSize === '58mm' ? 'invoice-58mm' : 'invoice-80mm'}`} aria-hidden="true">
-          <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold uppercase tracking-wider">{brand.restaurantName}</h1>
-          </div>
-          <div className="border-y border-dashed border-gray-400 py-3 mb-4 text-xs space-y-1">
-            <div className="flex justify-between">
-              <span>Order #</span>
-              <span className="font-bold">#{selectedOrder.orderNumber}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Table</span>
-              <span>{selectedOrder.tableNumber || 'N/A'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Type</span>
-              <span className="capitalize">{selectedOrder.orderType}</span>
-            </div>
-            {selectedOrder.customerPhone && (
-              <div className="flex justify-between">
-                <span>Phone</span>
-                <span className="font-bold">{selectedOrder.customerPhone}</span>
-              </div>
-            )}
-          </div>
+      {/* Hidden printable invoice — rendered for both manual print (selectedOrder) and auto-print (printingOrder) */}
+      {(selectedOrder || printingOrder) && (() => {
+        const inv = printingOrder ?? selectedOrder!;
+        const sizeClass = brand.invoiceSize === '58mm' ? 'invoice-58mm' : 'invoice-80mm';
+        const dt = new Date(inv.createdAt);
+        const dateStr = dt.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' });
+        const timeStr = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const isDineIn = inv.orderType === 'dine-in';
+        return (
+          <div className={`printable-invoice ${sizeClass}`} aria-hidden="true" style={{ fontFamily: "'Inter', monospace" }}>
 
-          <table className="w-full text-xs">
-            <thead className="border-b border-dashed border-gray-400">
-              <tr className="text-left font-bold">
-                <th className="py-2">Item</th>
-                <th className="py-2 text-center">Qty</th>
-                <th className="py-2 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {selectedOrder.items.map((item, i) => (
-                <tr key={i} className="border-b border-dotted border-gray-200">
-                  <td className="py-2">
-                     <p className="font-semibold">{item.menuItem.name}</p>
-                     {item.notes && <p className="text-[10px] text-gray-500 italic">Note: {item.notes}</p>}
-                  </td>
-                  <td className="py-2 text-center">{item.quantity}</td>
-                  <td className="py-2 text-right">{brand.currency}{(item.menuItem.price * item.quantity).toFixed(2)}</td>
+            {/* ── HEADER ─────────────────────────────── */}
+            <div style={{ textAlign: 'center', paddingBottom: '3mm', borderBottom: '2px solid #111', marginBottom: '3mm' }}>
+              <div style={{ fontSize: '13pt', fontWeight: '900', letterSpacing: '3px', textTransform: 'uppercase', lineHeight: 1.2 }}>
+                {brand.restaurantName}
+              </div>
+              {brand.tagline && (
+                <div style={{ fontSize: '7pt', color: '#555', marginTop: '1mm', fontStyle: 'italic' }}>
+                  {brand.tagline}
+                </div>
+              )}
+            </div>
+
+            {/* ── ORDER INFO ─────────────────────────── */}
+            <div style={{ fontSize: '7.5pt', marginBottom: '3mm', borderBottom: '1px dashed #999', paddingBottom: '3mm' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8mm' }}>
+                <span style={{ color: '#555' }}>Order</span>
+                <span style={{ fontWeight: '900' }}>#{String(inv.orderNumber).padStart(3, '0')}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8mm' }}>
+                <span style={{ color: '#555' }}>Date</span>
+                <span>{dateStr}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8mm' }}>
+                <span style={{ color: '#555' }}>Time</span>
+                <span>{timeStr}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8mm' }}>
+                <span style={{ color: '#555' }}>Type</span>
+                <span style={{ fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  {isDineIn ? '🍽 Dine-In' : '📦 Takeaway'}
+                </span>
+              </div>
+              {isDineIn && inv.tableNumber && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8mm' }}>
+                  <span style={{ color: '#555' }}>Table</span>
+                  <span style={{ fontWeight: '700' }}>Table {inv.tableNumber}</span>
+                </div>
+              )}
+              {inv.customerPhone && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#555' }}>Phone</span>
+                  <span style={{ fontWeight: '700' }}>{inv.customerPhone}</span>
+                </div>
+              )}
+            </div>
+
+            {/* ── ITEMS TABLE ────────────────────────── */}
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '3mm' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #111', borderTop: '1px solid #111' }}>
+                  <th style={{ textAlign: 'left', padding: '1.5mm 0', fontSize: '7pt', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Item</th>
+                  <th style={{ textAlign: 'center', padding: '1.5mm 0', fontSize: '7pt', fontWeight: '900', width: '7mm' }}>Qty</th>
+                  <th style={{ textAlign: 'right', padding: '1.5mm 0', fontSize: '7pt', fontWeight: '900' }}>Amt</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {inv.items.map((item, i) => (
+                  <tr key={i} style={{ borderBottom: '1px dotted #ddd' }}>
+                    <td style={{ padding: '1.8mm 1mm 1.8mm 0', verticalAlign: 'top' }}>
+                      <div style={{ fontWeight: '700', lineHeight: 1.2 }}>{item.menuItem.name}</div>
+                      {item.notes && (
+                        <div style={{ fontSize: '6.5pt', color: '#777', fontStyle: 'italic', marginTop: '0.5mm' }}>
+                          ↳ {item.notes}
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ textAlign: 'center', padding: '1.8mm 0', verticalAlign: 'top', color: '#444' }}>
+                      {item.quantity}
+                    </td>
+                    <td style={{ textAlign: 'right', padding: '1.8mm 0', verticalAlign: 'top', whiteSpace: 'nowrap', fontWeight: '600' }}>
+                      {brand.currency}{(item.menuItem.price * item.quantity).toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-          <div className="mt-6 border-t border-dashed border-gray-400 pt-3 space-y-1">
-            <div className="flex justify-between text-[10px] text-gray-600">
-              <span>Items Subtotal</span>
-              <span>{brand.currency}{(selectedOrder.subtotal ?? selectedOrder.total).toFixed(2)}</span>
+            {/* ── TOTALS ─────────────────────────────── */}
+            <div style={{ borderTop: '1px dashed #999', paddingTop: '2.5mm', fontSize: '7.5pt' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1mm' }}>
+                <span style={{ color: '#555' }}>Subtotal</span>
+                <span>{brand.currency}{(inv.subtotal ?? inv.total).toFixed(2)}</span>
+              </div>
+              {inv.taxAmount ? (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1mm' }}>
+                  <span style={{ color: '#555' }}>Tax</span>
+                  <span>{brand.currency}{inv.taxAmount.toFixed(2)}</span>
+                </div>
+              ) : null}
+              {inv.serviceChargeAmount ? (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1mm' }}>
+                  <span style={{ color: '#555' }}>Service Charge</span>
+                  <span>{brand.currency}{inv.serviceChargeAmount.toFixed(2)}</span>
+                </div>
+              ) : null}
+              {inv.additionalFeeAmount ? (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1mm' }}>
+                  <span style={{ color: '#555' }}>{brand.additionalFeeName || 'Fee'}</span>
+                  <span>{brand.currency}{inv.additionalFeeAmount.toFixed(2)}</span>
+                </div>
+              ) : null}
+              {/* Grand total */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #111', paddingTop: '2mm', marginTop: '1.5mm', fontWeight: '900', fontSize: '11pt', letterSpacing: '0.5px' }}>
+                <span style={{ textTransform: 'uppercase' }}>Total</span>
+                <span>{brand.currency}{inv.total.toFixed(2)}</span>
+              </div>
             </div>
-            {selectedOrder.taxAmount ? (
-              <div className="flex justify-between text-[10px] text-gray-600">
-                <span>Tax</span>
-                <span>{brand.currency}{selectedOrder.taxAmount.toFixed(2)}</span>
-              </div>
-            ) : null}
-            {selectedOrder.serviceChargeAmount ? (
-              <div className="flex justify-between text-[10px] text-gray-600">
-                <span>Service Charge</span>
-                <span>{brand.currency}{selectedOrder.serviceChargeAmount.toFixed(2)}</span>
-              </div>
-            ) : null}
-            {selectedOrder.additionalFeeAmount ? (
-              <div className="flex justify-between text-[10px] text-gray-600">
-                <span>{brand.additionalFeeName || 'Other Fees'}</span>
-                <span>{brand.currency}{selectedOrder.additionalFeeAmount.toFixed(2)}</span>
-              </div>
-            ) : null}
-            <div className="mt-2 flex justify-between border-t border-dotted border-gray-400 pt-2 text-sm font-bold text-gray-900">
-              <span className="uppercase">Grand Total</span>
-              <span>{brand.currency}{selectedOrder.total.toFixed(2)}</span>
-            </div>
-          </div>
 
-          <div className="mt-8 text-center text-xs border-t border-dashed border-gray-400 pt-4">
-            <p>Thank you for dining with us!</p>
+            {/* ── FOOTER ─────────────────────────────── */}
+            <div style={{ marginTop: '5mm', paddingTop: '2.5mm', borderTop: '1px dashed #999', textAlign: 'center', fontSize: '7pt', color: '#555' }}>
+              <div style={{ fontWeight: '700', fontSize: '8pt', marginBottom: '1mm', color: '#111' }}>
+                Thank you for your visit! 🙏
+              </div>
+              {brand.tagline && (
+                <div style={{ fontStyle: 'italic', marginBottom: '2mm' }}>{brand.tagline}</div>
+              )}
+              <div style={{ letterSpacing: '4px', fontSize: '6pt', color: '#aaa', marginTop: '2mm' }}>
+                ✦ ✦ ✦ ✦ ✦ ✦ ✦
+              </div>
+            </div>
+
           </div>
-        </div>
-      )}
+        );
+      })()}
       </div>
     </div>
   );

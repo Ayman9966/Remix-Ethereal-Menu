@@ -131,28 +131,6 @@
     letter-spacing: -0.02em;
   }
 
-  @media print {
-    @page {
-      margin: 0;
-    }
-    body {
-      margin: 0;
-    }
-    body * {
-      visibility: hidden;
-    }
-    .printable-invoice, .printable-invoice * {
-      visibility: visible;
-    }
-    .printable-invoice {
-      position: absolute;
-      left: 0;
-      top: 0;
-      margin: 0;
-      padding: 4mm;
-      background: white;
-    }
-  }
 }
 
 @layer utilities {
@@ -187,23 +165,36 @@
   }
 }
 
+/* Invoice sizing — respected in both screen (preview) and print */
 .invoice-80mm {
   width: 80mm;
+  font-size: 9pt;
 }
-
 .invoice-58mm {
   width: 58mm;
+  font-size: 8pt;
 }
 
+/* Hide the printable invoice on screen */
 .printable-invoice {
   display: none;
+  font-family: 'Inter', monospace;
+  color: #111;
+  background: white;
+  line-height: 1.4;
 }
 
 @media print {
+  @page {
+    size: auto;
+    margin: 4mm;
+  }
+
   body * {
     visibility: hidden;
   }
-  .printable-invoice, .printable-invoice * {
+  .printable-invoice,
+  .printable-invoice * {
     visibility: visible !important;
   }
   .printable-invoice {
@@ -211,13 +202,22 @@
     position: fixed;
     left: 0;
     top: 0;
-    width: 100%;
     height: auto;
-    background: white;
-    color: black;
-    padding: 40px;
+    background: white !important;
+    color: #111 !important;
+    padding: 5mm;
     z-index: 9999;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', monospace;
+    line-height: 1.4;
+  }
+  /* Enforce width from size class even during print */
+  .printable-invoice.invoice-80mm {
+    width: 80mm !important;
+    font-size: 9pt !important;
+  }
+  .printable-invoice.invoice-58mm {
+    width: 58mm !important;
+    font-size: 8pt !important;
   }
   .no-print {
     display: none !important;
