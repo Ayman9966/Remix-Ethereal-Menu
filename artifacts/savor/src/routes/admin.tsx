@@ -1021,6 +1021,32 @@ function BrandingTab() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Board Template</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { id: 1, label: 'Template 1', desc: 'Dark Cinematic', preview: '🎬' },
+                    { id: 2, label: 'Template 2', desc: 'Light Editorial', preview: '📋' },
+                  ].map(t => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setForm({ ...form, boardTemplate: t.id as 1 | 2 })}
+                      className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
+                        form.boardTemplate === t.id
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                          : 'border-border/40 bg-card hover:border-primary/30'
+                      }`}
+                    >
+                      <span className="text-2xl">{t.preview}</span>
+                      <div>
+                        <p className="text-sm font-bold text-foreground">{t.label}</p>
+                        <p className="text-[11px] text-muted-foreground">{t.desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="sm:col-span-2">
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                   Board Rotation Speed — {form.boardCycleSeconds}s
                 </label>
