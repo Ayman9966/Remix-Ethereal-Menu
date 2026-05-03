@@ -1,5 +1,5 @@
 import { Link, useLocation } from '@tanstack/react-router';
-import { UtensilsCrossed, LayoutGrid, ChefHat, Menu as MenuIcon, Settings, X, Search, Cloud, CloudOff, RefreshCw, ShoppingCart, Bell, History } from 'lucide-react';
+import { UtensilsCrossed, LayoutGrid, ChefHat, Menu as MenuIcon, Settings, X, Search, Cloud, CloudOff, RefreshCw, ShoppingCart, Bell, History, Printer } from 'lucide-react';
 import { useState } from 'react';
 import { useMenu } from '@/hooks/use-menu-context';
 
@@ -45,6 +45,7 @@ interface AppHeaderProps {
   awaitingCount?: number;
   onOpenWaiterCalls?: () => void;
   waiterCallsCount?: number;
+  onPrint?: () => void;
 }
 
 export function AppHeader(props: AppHeaderProps) {
@@ -52,7 +53,8 @@ export function AppHeader(props: AppHeaderProps) {
     onOpenApprovals, 
     awaitingCount = 0, 
     onOpenWaiterCalls, 
-    waiterCallsCount = 0 
+    waiterCallsCount = 0,
+    onPrint,
   } = props;
   const location = useLocation();
   const { brand, searchQuery, setSearchQuery, posViewMode, setPosViewMode } = useMenu();
@@ -145,6 +147,15 @@ export function AppHeader(props: AppHeaderProps) {
         </div>
 
         <div className="flex items-center gap-1">
+          {onPrint && (
+            <button
+              onClick={onPrint}
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-surface-low transition-all active:scale-90"
+              title="Print current order / last order"
+            >
+              <Printer className="h-5 w-5" />
+            </button>
+          )}
           {onOpenWaiterCalls && (
             <button
               onClick={onOpenWaiterCalls}

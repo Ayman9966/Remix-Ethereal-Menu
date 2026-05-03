@@ -62,16 +62,14 @@ function POSPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
 
-  // Auto-print: fires after printingOrder is set and invoice DOM is painted
+  // Auto-print: 200 ms gives React time to flush the invoice DOM before print dialog
   useEffect(() => {
     if (!printingOrder) return;
-    const id = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.print();
-        setPrintingOrder(null);
-      });
-    });
-    return () => cancelAnimationFrame(id);
+    const timer = setTimeout(() => {
+      window.print();
+      setPrintingOrder(null);
+    }, 200);
+    return () => clearTimeout(timer);
   }, [printingOrder]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -167,6 +165,36 @@ function POSPage() {
   const canTakeaway = brand.orderingMode === 'takeaway' || brand.orderingMode === 'both';
   const showToggle = canDineIn && canTakeaway;
 
+  const handlePrint = () => {
+    if (cart.length > 0) {
+      // Print the current cart as a draft receipt
+      setPrintingOrder({
+        id: 'draft-print',
+        items: cart,
+        status: 'pending',
+        orderType,
+        tableNumber: orderType === 'dine-in' ? tableNumber : undefined,
+        customerPhone: orderType === 'takeaway' ? customerPhone : undefined,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        total,
+        subtotal,
+        taxAmount: tax,
+        serviceChargeAmount: serviceCharge,
+        additionalFeeAmount: additionalFee,
+        orderNumber: brand.nextOrderNumber,
+      });
+    } else if (orders.length > 0) {
+      // Print the most recent order
+      const last = [...orders].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )[0];
+      setPrintingOrder(last);
+    } else {
+      toast.info('No order to print yet.');
+    }
+  };
+
   const sendOrder = () => {
     if (cart.length === 0) return;
     const now = new Date();
@@ -220,6 +248,7 @@ function POSPage() {
         awaitingCount={awaiting_orders.length}
         onOpenWaiterCalls={() => setShowWaiterCallsDialog(true)}
         waiterCallsCount={active_waiter_calls.length}
+        onPrint={handlePrint}
       />
       {!isOnline && (
         <div className="flex items-center gap-2 bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 text-amber-700 dark:text-amber-400">
