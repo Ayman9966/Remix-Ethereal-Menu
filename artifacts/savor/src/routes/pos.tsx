@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { X, Send, Package, Bell, Check, Printer, ShoppingCart, Plus, Minus, ChevronDown, ChevronUp, WifiOff, MessageSquare } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import type { MenuItem, OrderItem, Order } from '@/lib/menu-data';
 import { toast } from 'sonner';
@@ -167,8 +168,8 @@ function POSPage() {
 
   const handlePrint = () => {
     if (cart.length > 0) {
-      // Print the current cart as a draft receipt
-      setPrintingOrder({
+      // flushSync forces the invoice div into the DOM before window.print() is called
+      flushSync(() => setPrintingOrder({
         id: 'draft-print',
         items: cart,
         status: 'pending',
@@ -183,16 +184,22 @@ function POSPage() {
         serviceChargeAmount: serviceCharge,
         additionalFeeAmount: additionalFee,
         orderNumber: brand.nextOrderNumber,
-      });
-    } else if (orders.length > 0) {
-      // Print the most recent order
+      }));
+      window.print();
+      setPrintingOrder(null);
+      return;
+    }
+    if (orders.length > 0) {
+      // Reprint the most recent order
       const last = [...orders].sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )[0];
-      setPrintingOrder(last);
-    } else {
-      toast.info('No order to print yet.');
+      flushSync(() => setPrintingOrder(last));
+      window.print();
+      setPrintingOrder(null);
+      return;
     }
+    toast.info('No order to print yet.');
   };
 
   const sendOrder = () => {
