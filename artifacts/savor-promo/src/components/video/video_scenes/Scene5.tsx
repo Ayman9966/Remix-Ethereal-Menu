@@ -6,100 +6,98 @@ export function Scene5() {
 
   useEffect(() => {
     const timers = [
-      setTimeout(() => setPhase(1), 200),
-      setTimeout(() => setPhase(2), 900),
-      setTimeout(() => setPhase(3), 1600),
-      setTimeout(() => setPhase(4), 2800),
+      setTimeout(() => setPhase(1), 100),
+      setTimeout(() => setPhase(2), 500),
+      setTimeout(() => setPhase(3), 1100),
+      setTimeout(() => setPhase(4), 1900),
     ];
     return () => timers.forEach(t => clearTimeout(t));
   }, []);
 
-  const tagline = 'Run your restaurant beautifully.';
+  const screenshots = [
+    { src: '/ss-menu.jpg', rotate: -4, x: '-28vw', y: '-12vh', scale: 0.72 },
+    { src: '/ss-kitchen.jpg', rotate: 3, x: '28vw', y: '-10vh', scale: 0.78 },
+    { src: '/ss-pos.jpg', rotate: -2, x: '-32vw', y: '18vh', scale: 0.68 },
+    { src: '/ss-admin.jpg', rotate: 2.5, x: '30vw', y: '20vh', scale: 0.76 },
+  ];
 
   return (
     <motion.div
-      className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--color-bg-light)]"
-      initial={{ opacity: 1 }}
+      className="absolute inset-0 flex items-center justify-center overflow-hidden"
+      style={{ background: '#0c1412' }}
+      initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.6 }}
     >
-      <div className="relative z-10 text-center px-16">
+      {/* Radial centre glow */}
+      <div style={{ position: 'absolute', width: '60vw', height: '60vw', borderRadius: '50%', background: 'radial-gradient(circle, rgba(66,101,100,0.22) 0%, transparent 65%)', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }} />
+
+      {/* Background screenshot tiles */}
+      {screenshots.map((s, i) => (
         <motion.div
-          className="w-20 h-20 mb-10 mx-auto rounded-2xl bg-[var(--color-primary)] flex items-center justify-center"
-          initial={{ scale: 0, rotate: -20 }}
-          animate={phase >= 1 ? { scale: 1, rotate: 0 } : { scale: 0, rotate: -20 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+          key={i}
+          style={{ position: 'absolute', borderRadius: '1.2vw', overflow: 'hidden', border: '1px solid rgba(93,145,143,0.18)', boxShadow: '0 1.5vw 4vw rgba(0,0,0,0.5)', top: '50%', left: '50%', width: '36vw', aspectRatio: '16/10', transform: `translate(-50%,-50%) translateX(${s.x}) translateY(${s.y}) rotate(${s.rotate}deg) scale(${s.scale})` }}
+          initial={{ opacity: 0, scale: s.scale * 0.85 }}
+          animate={phase >= 1 ? { opacity: 0.55, scale: s.scale } : {}}
+          transition={{ duration: 0.7, delay: i * 0.08, ease: 'easeOut' }}
         >
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <img src={s.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', display: 'block' }} />
+        </motion.div>
+      ))}
+
+      {/* Frosted centre card */}
+      <motion.div
+        style={{ position: 'relative', zIndex: 10, textAlign: 'center', padding: '4vh 5vw', borderRadius: '2vw', background: 'rgba(12,20,18,0.82)', backdropFilter: 'blur(20px)', border: '1px solid rgba(93,145,143,0.25)', boxShadow: '0 2vw 6vw rgba(0,0,0,0.5)' }}
+        initial={{ opacity: 0, scale: 0.88 }}
+        animate={phase >= 2 ? { opacity: 1, scale: 1 } : {}}
+        transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+      >
+        {/* Logo */}
+        <motion.div
+          style={{ width: '4.5vw', height: '4.5vw', borderRadius: '1.2vw', background: '#426564', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2vh', boxShadow: '0 0 2.5vw rgba(66,101,100,0.5)' }}
+          initial={{ scale: 0, rotate: -15 }}
+          animate={phase >= 2 ? { scale: 1, rotate: 0 } : {}}
+          transition={{ type: 'spring', stiffness: 300, damping: 18 }}
+        >
+          <svg width="44%" height="44%" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
             <path d="M7 2v20"/>
-            <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+            <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3v7"/>
           </svg>
         </motion.div>
 
-        <div style={{ perspective: '1200px' }}>
+        {/* Big wordmark */}
+        <div style={{ perspective: '800px', overflow: 'hidden' }}>
           <motion.h1
-            className="text-[8vw] font-black tracking-tight text-[var(--color-text-primary)] leading-none mb-6"
-            style={{ fontFamily: 'var(--font-display)' }}
-            initial={{ opacity: 0, rotateX: -40, y: 50 }}
-            animate={phase >= 2 ? { opacity: 1, rotateX: 0, y: 0 } : { opacity: 0, rotateX: -40, y: 50 }}
+            style={{ fontFamily: 'var(--font-display)', fontSize: '10vw', fontWeight: 900, color: '#eef3f2', lineHeight: 0.9, letterSpacing: '-0.04em' }}
+            initial={{ opacity: 0, y: '40%', rotateX: -20 }}
+            animate={phase >= 3 ? { opacity: 1, y: 0, rotateX: 0 } : {}}
             transition={{ type: 'spring', stiffness: 260, damping: 22 }}
           >
             Savor
           </motion.h1>
         </div>
 
-        <div className="overflow-hidden">
-          <motion.p
-            className="text-[2vw] text-[var(--color-text-secondary)] font-medium tracking-wide"
-            initial={{ opacity: 0, y: 30 }}
-            animate={phase >= 3 ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-          >
-            {tagline}
-          </motion.p>
-        </div>
-
-        <motion.div
-          className="mt-12 flex items-center justify-center gap-3"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={phase >= 4 ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+        {/* Tagline */}
+        <motion.p
+          style={{ fontFamily: 'var(--font-body)', fontSize: '1.6vw', color: '#7aacaa', marginTop: '1.5vh', letterSpacing: '0.04em' }}
+          initial={{ opacity: 0, y: 15 }}
+          animate={phase >= 4 ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
-          <motion.div
-            className="h-[2px] bg-[var(--color-primary)]"
-            initial={{ width: 0 }}
-            animate={phase >= 4 ? { width: '80px' } : { width: 0 }}
-            transition={{ duration: 0.8, ease: 'circOut' }}
-          />
-          <span
-            className="text-[1.2vw] text-[var(--color-primary)] font-bold tracking-widest uppercase"
-          >
-            Restaurant Management
-          </span>
-          <motion.div
-            className="h-[2px] bg-[var(--color-primary)]"
-            initial={{ width: 0 }}
-            animate={phase >= 4 ? { width: '80px' } : { width: 0 }}
-            transition={{ duration: 0.8, ease: 'circOut' }}
-          />
-        </motion.div>
-      </div>
+          Run your restaurant beautifully.
+        </motion.p>
 
-      {/* Ambient floating orbs for continuous motion */}
-      <motion.div
-        className="absolute w-[30vw] h-[30vw] rounded-full opacity-10 blur-[60px] pointer-events-none"
-        style={{ background: 'var(--color-primary)', top: '-5%', right: '-5%' }}
-        animate={{ scale: [1, 1.1, 1], x: [0, 10, 0], y: [0, -10, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <motion.div
-        className="absolute w-[20vw] h-[20vw] rounded-full opacity-10 blur-[50px] pointer-events-none"
-        style={{ background: 'var(--color-accent)', bottom: '5%', left: '5%' }}
-        animate={{ scale: [1, 1.15, 1], x: [0, -8, 0], y: [0, 8, 0] }}
-        transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
-      />
+        {/* Divider line */}
+        <motion.div
+          className="mx-auto mt-5"
+          style={{ height: '2px', background: 'linear-gradient(to right, transparent, #426564, transparent)', borderRadius: '2px' }}
+          initial={{ width: 0 }}
+          animate={phase >= 4 ? { width: '12vw' } : {}}
+          transition={{ duration: 0.7, ease: 'circOut' }}
+        />
+      </motion.div>
     </motion.div>
   );
 }

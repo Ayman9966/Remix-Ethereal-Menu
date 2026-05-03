@@ -6,70 +6,82 @@ export function Scene3() {
 
   useEffect(() => {
     const timers = [
-      setTimeout(() => setPhase(1), 300),
-      setTimeout(() => setPhase(2), 1000),
+      setTimeout(() => setPhase(1), 150),
+      setTimeout(() => setPhase(2), 700),
+      setTimeout(() => setPhase(3), 1400),
     ];
     return () => timers.forEach(t => clearTimeout(t));
   }, []);
 
   return (
-    <motion.div 
-      className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--color-bg-dark)]"
-      initial={{ opacity: 0, scale: 1.1 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.8, ease: 'easeInOut' }}
+    <motion.div
+      className="absolute inset-0 overflow-hidden"
+      style={{ background: '#0c1412' }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, scale: 1.03 }}
+      transition={{ duration: 0.5 }}
     >
-      <div className="text-center z-10 mb-16">
-        <motion.div
-          className="text-sm font-bold tracking-widest text-[var(--color-primary)] uppercase mb-4"
-          initial={{ opacity: 0, y: -20 }}
-          animate={phase >= 1 ? { opacity: 1, y: 0 } : { opacity: 0, y: -20 }}
-          transition={{ duration: 0.6 }}
-        >
-          Kitchen Display
-        </motion.div>
-        <motion.h2 
-          className="text-[4.5vw] font-bold text-white leading-[1.1]"
-          style={{ fontFamily: 'var(--font-display)' }}
-          initial={{ opacity: 0, y: 20 }}
-          animate={phase >= 1 ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.1 }}
-        >
-          Real-time kitchen flow
-        </motion.h2>
+      {/* Full-bleed kitchen screenshot with dark overlay */}
+      <motion.div
+        className="absolute inset-0"
+        initial={{ scale: 1.08, opacity: 0 }}
+        animate={phase >= 1 ? { scale: 1, opacity: 1 } : {}}
+        transition={{ duration: 1, ease: 'easeOut' }}
+      >
+        <img src="/ss-kitchen.jpg" alt="Kitchen Display" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', display: 'block' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(12,20,18,0.92) 45%, rgba(12,20,18,0.5) 100%)' }} />
+      </motion.div>
+
+      {/* Content */}
+      <div className="absolute inset-0 flex items-center" style={{ paddingLeft: '8vw' }}>
+        <div style={{ maxWidth: '46vw' }}>
+          <motion.span
+            style={{ fontFamily: 'var(--font-body)', fontSize: '1.1vw', color: '#5d918f', letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '1.5vh' }}
+            initial={{ opacity: 0, x: -20 }}
+            animate={phase >= 1 ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.5 }}
+          >
+            Kitchen Display
+          </motion.span>
+
+          <motion.h2
+            style={{ fontFamily: 'var(--font-display)', fontSize: '6vw', fontWeight: 900, color: '#eef3f2', lineHeight: 1.0, letterSpacing: '-0.03em', marginBottom: '3.5vh' }}
+            initial={{ opacity: 0, y: 35 }}
+            animate={phase >= 2 ? { opacity: 1, y: 0 } : {}}
+            transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+          >
+            Zero tickets<br />missed. Ever.
+          </motion.h2>
+
+          <motion.div
+            style={{ display: 'flex', gap: '3vw' }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={phase >= 3 ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {[
+              { label: 'Live queue', sub: 'New orders appear instantly' },
+              { label: 'Color states', sub: 'New · In progress · Ready' },
+              { label: '1 tap done', sub: 'No verbal handoff needed' },
+            ].map((item) => (
+              <div key={item.label}>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.6vw', fontWeight: 700, color: '#eef3f2', marginBottom: '0.5vh' }}>{item.label}</div>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: '1.2vw', color: '#7aacaa' }}>{item.sub}</div>
+              </div>
+            ))}
+          </motion.div>
+        </div>
       </div>
 
-      <div className="flex gap-6 relative z-10">
-        {[1, 2, 3, 4].map((i) => (
-          <motion.div
-            key={i}
-            className={`w-[18vw] bg-white/5 border border-white/10 rounded-2xl p-5 ${i === 2 ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' : ''}`}
-            initial={{ opacity: 0, y: 40 }}
-            animate={phase >= 2 ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
-            transition={{ type: 'spring', stiffness: 200, damping: 20, delay: i * 0.15 }}
-          >
-            <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-3">
-              <div className="text-white/80 font-mono text-sm">Table {i * 2 + 1}</div>
-              <div className="text-xs text-[var(--color-primary)] font-bold">12m</div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded-full border border-white/20"></div>
-                <div className="h-3 w-3/4 bg-white/60 rounded"></div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded-full border border-white/20"></div>
-                <div className="h-3 w-1/2 bg-white/60 rounded"></div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded-full border border-white/20"></div>
-                <div className="h-3 w-2/3 bg-white/60 rounded"></div>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+      {/* Accent edge line */}
+      <motion.div
+        className="absolute left-0 top-0 bottom-0"
+        style={{ width: '0.3vw', background: 'linear-gradient(to bottom, transparent, #426564, transparent)' }}
+        initial={{ scaleY: 0 }}
+        animate={phase >= 1 ? { scaleY: 1 } : {}}
+        transition={{ duration: 0.8, ease: 'circOut' }}
+      />
     </motion.div>
   );
 }
