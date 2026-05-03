@@ -218,17 +218,18 @@ function ModuleShowcase() {
         style={{ opacity: visible ? 1 : 0 }}
       >
         {mod.mobile ? (
-          <div className="flex justify-center py-4">
+          <div className="flex justify-center py-6">
             <PhoneMockup src={mod.url} />
           </div>
         ) : (
           <BrowserMockup url={mod.url}>
-            <div className="overflow-hidden">
+            {/* padding-bottom % → responsive aspect-ratio cut, no fixed px heights */}
+            <div className="relative overflow-hidden" style={{ paddingBottom: '46%' }}>
               <img
                 src={mod.screenshot}
                 alt={mod.label}
-                className="w-full object-cover"
-                style={{ height: mod.cut.height, objectPosition: mod.cut.objectPosition }}
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{ objectPosition: mod.cut.objectPosition }}
               />
             </div>
           </BrowserMockup>
@@ -461,12 +462,12 @@ function LandingPage() {
             {/* Staff */}
             <div className="flex flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
               <div className="overflow-hidden bg-gray-50">
-                {/* kitchen screen cut */}
-                <div className="overflow-hidden" style={{ height: 220 }}>
+                {/* kitchen screen cut — responsive aspect ratio */}
+                <div className="relative overflow-hidden" style={{ paddingBottom: '58%' }}>
                   <img
                     src="/ss-kitchen.jpg"
                     alt="Kitchen display"
-                    className="w-full object-cover"
+                    className="absolute inset-0 h-full w-full object-cover"
                     style={{ objectPosition: 'center 18%' }}
                   />
                 </div>
@@ -499,12 +500,12 @@ function LandingPage() {
             {/* Managers */}
             <div className="flex flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
               <div className="overflow-hidden bg-gray-50">
-                {/* analytics screen cut — just the charts */}
-                <div className="overflow-hidden" style={{ height: 220 }}>
+                {/* analytics screen cut — responsive aspect ratio */}
+                <div className="relative overflow-hidden" style={{ paddingBottom: '58%' }}>
                   <img
                     src="/ss-admin.jpg"
                     alt="Analytics dashboard"
-                    className="w-full object-cover"
+                    className="absolute inset-0 h-full w-full object-cover"
                     style={{ objectPosition: 'center 60%' }}
                   />
                 </div>
