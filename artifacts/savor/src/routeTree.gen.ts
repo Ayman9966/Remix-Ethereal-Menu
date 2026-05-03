@@ -15,7 +15,7 @@ import { Route as KitchenRouteImport } from './routes/kitchen'
 import { Route as BoardRouteImport } from './routes/board'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as TChar123tableNumberChar125RouteImport } from './routes/t.{$tableNumber}'
+import { Route as TTableNumberRouteImport } from './routes/t.$tableNumber'
 
 const PosRoute = PosRouteImport.update({
   id: '/pos',
@@ -47,12 +47,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TChar123tableNumberChar125Route =
-  TChar123tableNumberChar125RouteImport.update({
-    id: '/t/{$tableNumber}',
-    path: '/t/{$tableNumber}',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const TTableNumberRoute = TTableNumberRouteImport.update({
+  id: '/t/$tableNumber',
+  path: '/t/$tableNumber',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,7 +60,7 @@ export interface FileRoutesByFullPath {
   '/kitchen': typeof KitchenRoute
   '/menu': typeof MenuRoute
   '/pos': typeof PosRoute
-  '/t/{$tableNumber}': typeof TChar123tableNumberChar125Route
+  '/t/$tableNumber': typeof TTableNumberRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,7 +69,7 @@ export interface FileRoutesByTo {
   '/kitchen': typeof KitchenRoute
   '/menu': typeof MenuRoute
   '/pos': typeof PosRoute
-  '/t/{$tableNumber}': typeof TChar123tableNumberChar125Route
+  '/t/$tableNumber': typeof TTableNumberRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,7 +79,7 @@ export interface FileRoutesById {
   '/kitchen': typeof KitchenRoute
   '/menu': typeof MenuRoute
   '/pos': typeof PosRoute
-  '/t/{$tableNumber}': typeof TChar123tableNumberChar125Route
+  '/t/$tableNumber': typeof TTableNumberRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,7 +90,7 @@ export interface FileRouteTypes {
     | '/kitchen'
     | '/menu'
     | '/pos'
-    | '/t/{$tableNumber}'
+    | '/t/$tableNumber'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -100,7 +99,7 @@ export interface FileRouteTypes {
     | '/kitchen'
     | '/menu'
     | '/pos'
-    | '/t/{$tableNumber}'
+    | '/t/$tableNumber'
   id:
     | '__root__'
     | '/'
@@ -109,7 +108,7 @@ export interface FileRouteTypes {
     | '/kitchen'
     | '/menu'
     | '/pos'
-    | '/t/{$tableNumber}'
+    | '/t/$tableNumber'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -119,7 +118,7 @@ export interface RootRouteChildren {
   KitchenRoute: typeof KitchenRoute
   MenuRoute: typeof MenuRoute
   PosRoute: typeof PosRoute
-  TChar123tableNumberChar125Route: typeof TChar123tableNumberChar125Route
+  TTableNumberRoute: typeof TTableNumberRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -166,11 +165,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/t/{$tableNumber}': {
-      id: '/t/{$tableNumber}'
-      path: '/t/{$tableNumber}'
-      fullPath: '/t/{$tableNumber}'
-      preLoaderRoute: typeof TChar123tableNumberChar125RouteImport
+    '/t/$tableNumber': {
+      id: '/t/$tableNumber'
+      path: '/t/$tableNumber'
+      fullPath: '/t/$tableNumber'
+      preLoaderRoute: typeof TTableNumberRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -183,7 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   KitchenRoute: KitchenRoute,
   MenuRoute: MenuRoute,
   PosRoute: PosRoute,
-  TChar123tableNumberChar125Route: TChar123tableNumberChar125Route,
+  TTableNumberRoute: TTableNumberRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
