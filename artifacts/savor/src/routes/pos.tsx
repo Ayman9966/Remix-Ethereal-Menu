@@ -51,19 +51,6 @@ function POSPage() {
     }
   }, [categories, activeCategory]);
 
-  // Auto-print: fires after printingOrder is set and invoice DOM is painted
-  useEffect(() => {
-    if (!printingOrder) return;
-    // Double rAF ensures two paint cycles — invoice is guaranteed rendered
-    const id = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.print();
-        setPrintingOrder(null);
-      });
-    });
-    return () => cancelAnimationFrame(id);
-  }, [printingOrder]);
-
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const defaultType = brand.orderingMode === 'takeaway' ? 'takeaway' : 'dine-in';
@@ -74,6 +61,18 @@ function POSPage() {
   const [showSummary, setShowSummary] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
+
+  // Auto-print: fires after printingOrder is set and invoice DOM is painted
+  useEffect(() => {
+    if (!printingOrder) return;
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.print();
+        setPrintingOrder(null);
+      });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [printingOrder]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
