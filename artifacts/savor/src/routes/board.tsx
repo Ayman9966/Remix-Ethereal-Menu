@@ -240,6 +240,8 @@ function BoardTemplate1({
 }
 
 // ─── Template 2: Grand Menu Spotlight ────────────────────────────────────────
+const ITEM_CYCLE_SECS = 4;
+
 function BoardTemplate2({
   brand, showPhotos, showPrice, showDescription, showPrepTime,
   reduceMotion, now,
@@ -250,8 +252,37 @@ function BoardTemplate2({
   const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const dateStr = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
 
-  const featuredItem = activeItems[0] ?? null;
-  const sideItems = activeItems.slice(1);
+  // Item-level cycling within the current category
+  const [featuredIdx, setFeaturedIdx] = useState(0);
+  const [itemProgress, setItemProgress] = useState(0); // 0-100 for the progress bar
+
+  // Reset when category changes
+  useEffect(() => {
+    setFeaturedIdx(0);
+    setItemProgress(0);
+  }, [activeCategory?.id]);
+
+  // Cycle through items
+  useEffect(() => {
+    if (activeItems.length <= 1) return;
+    const t = window.setInterval(() => {
+      setFeaturedIdx(n => (n + 1) % activeItems.length);
+      setItemProgress(0);
+    }, ITEM_CYCLE_SECS * 1000);
+    return () => window.clearInterval(t);
+  }, [activeItems.length, activeCategory?.id]);
+
+  // Smooth progress bar for item cycle
+  useEffect(() => {
+    setItemProgress(0);
+    if (activeItems.length <= 1) return;
+    const TICK = 50; // ms
+    const step = (TICK / (ITEM_CYCLE_SECS * 1000)) * 100;
+    const t = window.setInterval(() => setItemProgress(p => Math.min(100, p + step)), TICK);
+    return () => window.clearInterval(t);
+  }, [featuredIdx, activeItems.length]);
+
+  const featuredItem = activeItems[featuredIdx] ?? activeItems[0] ?? null;
 
   return (
     <div className="h-screen flex overflow-hidden" style={{ backgroundColor: '#0C0A08' }}>
@@ -281,9 +312,9 @@ function BoardTemplate2({
 
       {/* ── LEFT: Hero Featured Item ── */}
       <div
-        key={`hero-${activeCategory?.id}`}
+        key={`hero-${activeCategory?.id}-${featuredIdx}`}
         className="relative w-[52%] shrink-0 overflow-hidden"
-        style={reduceMotion ? undefined : { animation: 't2HeroIn 800ms cubic-bezier(0.2,0.8,0.2,1)' }}
+        style={reduceMotion ? undefined : { animation: 't2HeroIn 700ms cubic-bezier(0.2,0.8,0.2,1)' }}
       >
         {/* Background — item image or gradient */}
         {featuredItem?.image && showPhotos ? (
@@ -338,12 +369,39 @@ function BoardTemplate2({
         <div className="absolute bottom-0 left-0 right-0 px-8 pb-8">
           {featuredItem ? (
             <>
-              {/* "Featured" label */}
-              <div className="flex items-center gap-2 mb-4">
-                <div className="h-px flex-1" style={{ background: `linear-gradient(to right, ${accent}, transparent)` }} />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em]" style={{ color: accent }}>
-                  Featured
-                </span>
+              {/* Item position label + progress bar */}
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-px flex-1" style={{ background: `linear-gradient(to right, ${accent}, transparent)` }} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em]" style={{ color: accent }}>
+                    {activeItems.length > 1 ? `${featuredIdx + 1} of ${activeItems.length}` : 'Featured'}
+                  </span>
+                </div>
+                {/* Item cycle progress bar */}
+                {activeItems.length > 1 && (
+                  <div className="h-0.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                    <div
+                      className="h-full rounded-full transition-none"
+                      style={{ width: `${itemProgress}%`, backgroundColor: accent }}
+                    />
+                  </div>
+                )}
+                {/* Item dots */}
+                {activeItems.length > 1 && activeItems.length <= 12 && (
+                  <div className="flex gap-1.5 mt-2">
+                    {activeItems.map((_, i) => (
+                      <div
+                        key={i}
+                        className="rounded-full transition-all duration-400"
+                        style={{
+                          width: i === featuredIdx ? 16 : 5,
+                          height: 5,
+                          backgroundColor: i === featuredIdx ? accent : 'rgba(255,255,255,0.2)',
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
 
               <h2 className="font-display text-[52px] font-black leading-none text-white mb-3 drop-shadow-2xl">
@@ -414,79 +472,96 @@ function BoardTemplate2({
           </p>
         </div>
 
-        {/* Side items list (items 2…N) */}
-        <div className="flex-1 overflow-y-auto px-8 py-4" key={activeCategory?.id}>
-          {sideItems.length === 0 && !featuredItem && (
-            <div className="flex h-full items-center justify-center">
+        {/* All items list — active one highlighted */}
+        <div className="flex-1 overflow-y-auto px-6 py-4" key={activeCategory?.id}>
+          {activeItems.length === 0 && (
+            <div className="flex h-full items-center justify-center flex-col gap-3">
+              <div className="text-5xl opacity-20">{activeCategory?.icon ?? '🍽️'}</div>
               <p className="text-white/20 text-sm font-bold uppercase tracking-widest">Nothing here yet</p>
             </div>
           )}
 
-          {sideItems.length === 0 && featuredItem && (
-            <div className="flex h-full items-center justify-center flex-col gap-3">
-              <div className="text-5xl opacity-20">{activeCategory?.icon}</div>
-              <p className="text-white/20 text-xs font-bold uppercase tracking-widest">Only item in this category</p>
-            </div>
-          )}
-
           <div className="space-y-1">
-            {sideItems.map((it, index) => (
-              <div
-                key={it.id}
-                className="t2-row flex items-center gap-4 rounded-2xl px-4 py-3.5 transition-colors"
-                style={{
-                  animationDelay: `${(index + 1) * 70}ms`,
-                  backgroundColor: index % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent',
-                }}
-              >
-                {/* Sequence number */}
-                <span
-                  className="shrink-0 font-display text-xs font-black tabular-nums w-6 text-right"
-                  style={{ color: `${accent}80` }}
+            {activeItems.map((it, index) => {
+              const isActive = index === featuredIdx;
+              return (
+                <div
+                  key={it.id}
+                  className="t2-row flex items-center gap-4 rounded-2xl px-4 py-3.5 transition-all duration-500"
+                  style={{
+                    animationDelay: `${index * 60}ms`,
+                    backgroundColor: isActive ? `${accent}22` : 'transparent',
+                    border: isActive ? `1px solid ${accent}44` : '1px solid transparent',
+                  }}
                 >
-                  {String(index + 2).padStart(2, '0')}
-                </span>
+                  {/* Sequence number */}
+                  <span
+                    className="shrink-0 font-display text-xs font-black tabular-nums w-6 text-right transition-colors duration-500"
+                    style={{ color: isActive ? accent : `${accent}55` }}
+                  >
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
 
-                {/* Thumbnail */}
-                {showPhotos && (
-                  it.image ? (
-                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl">
-                      <img src={it.image} alt={it.name} className="h-full w-full object-cover" decoding="async" loading="lazy" />
-                    </div>
-                  ) : (
-                    <div
-                      className="h-12 w-12 shrink-0 rounded-xl flex items-center justify-center text-xl"
-                      style={{ backgroundColor: `${accent}18` }}
+                  {/* Thumbnail */}
+                  {showPhotos && (
+                    it.image ? (
+                      <div
+                        className="h-12 w-12 shrink-0 overflow-hidden rounded-xl transition-all duration-500"
+                        style={{ opacity: isActive ? 1 : 0.45, transform: isActive ? 'scale(1.05)' : 'scale(1)' }}
+                      >
+                        <img src={it.image} alt={it.name} className="h-full w-full object-cover" decoding="async" loading="lazy" />
+                      </div>
+                    ) : (
+                      <div
+                        className="h-12 w-12 shrink-0 rounded-xl flex items-center justify-center text-xl transition-all duration-500"
+                        style={{
+                          backgroundColor: isActive ? `${accent}35` : `${accent}12`,
+                          opacity: isActive ? 1 : 0.5,
+                        }}
+                      >
+                        {activeCategory?.icon ?? '🍽️'}
+                      </div>
+                    )
+                  )}
+
+                  {/* Name + description */}
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="font-display text-[17px] font-black leading-tight truncate transition-colors duration-500"
+                      style={{ color: isActive ? '#fff' : 'rgba(255,255,255,0.45)' }}
                     >
-                      {activeCategory?.icon ?? '🍽️'}
-                    </div>
-                  )
-                )}
-
-                {/* Name + description */}
-                <div className="flex-1 min-w-0">
-                  <p className="font-display text-[17px] font-black text-white leading-tight truncate">{it.name}</p>
-                  {showDescription && it.description && (
-                    <p className="text-[11px] text-white/40 leading-snug line-clamp-1 mt-0.5">{it.description}</p>
-                  )}
-                </div>
-
-                {/* Right: price + prep */}
-                <div className="shrink-0 text-right">
-                  {showPrice && (
-                    <p className="font-display text-lg font-black tabular-nums" style={{ color: accent }}>
-                      {brand.currency}{it.price.toFixed(2)}
+                      {it.name}
                     </p>
-                  )}
-                  {showPrepTime && it.preparationTime > 0 && (
-                    <p className="flex items-center justify-end gap-1 text-[10px] text-white/30 mt-0.5">
-                      <Clock3 className="h-2.5 w-2.5" />
-                      {it.preparationTime}m
-                    </p>
-                  )}
+                    {showDescription && it.description && (
+                      <p
+                        className="text-[11px] leading-snug line-clamp-1 mt-0.5 transition-colors duration-500"
+                        style={{ color: isActive ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.22)' }}
+                      >
+                        {it.description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Right: price + prep */}
+                  <div className="shrink-0 text-right">
+                    {showPrice && (
+                      <p
+                        className="font-display text-lg font-black tabular-nums transition-colors duration-500"
+                        style={{ color: isActive ? accent : `${accent}55` }}
+                      >
+                        {brand.currency}{it.price.toFixed(2)}
+                      </p>
+                    )}
+                    {showPrepTime && it.preparationTime > 0 && (
+                      <p className="flex items-center justify-end gap-1 text-[10px] text-white/25 mt-0.5">
+                        <Clock3 className="h-2.5 w-2.5" />
+                        {it.preparationTime}m
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
