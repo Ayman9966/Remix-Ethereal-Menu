@@ -1,5 +1,5 @@
 import { Link, useLocation } from '@tanstack/react-router';
-import { UtensilsCrossed, LayoutGrid, ChefHat, Menu as MenuIcon, Settings, X, Search, Cloud, CloudOff, RefreshCw, ShoppingCart, Bell } from 'lucide-react';
+import { UtensilsCrossed, LayoutGrid, ChefHat, Menu as MenuIcon, Settings, X, Search, Cloud, CloudOff, RefreshCw, ShoppingCart, Bell, History } from 'lucide-react';
 import { useState } from 'react';
 import { useMenu } from '@/hooks/use-menu-context';
 
@@ -119,7 +119,7 @@ export function AppHeader(props: AppHeaderProps) {
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    <ChefHat className="h-4 w-4" />
+                    <History className="h-4 w-4" />
                     History
                   </button>
                 </div>

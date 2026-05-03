@@ -27,7 +27,11 @@ export function ApprovalDialog({ open, onOpenChange }: ApprovalDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+      <DialogContent
+        showCloseButton={false}
+        aria-describedby={undefined}
+        className="max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl"
+      >
         <div className="p-6 border-b shrink-0 bg-surface-low/30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -43,9 +47,13 @@ export function ApprovalDialog({ open, onOpenChange }: ApprovalDialogProps) {
                 </p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="rounded-xl">
+            <button
+              onClick={() => onOpenChange(false)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-surface-low hover:text-foreground transition-colors"
+              aria-label="Close"
+            >
               <X className="h-5 w-5" />
-            </Button>
+            </button>
           </div>
         </div>
         
@@ -94,7 +102,7 @@ export function ApprovalDialog({ open, onOpenChange }: ApprovalDialogProps) {
                         {brand.currency}{order.total.toFixed(2)}
                       </p>
                       <p className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mt-1.5">
-                        {order.items.length} Items Summary
+                        {order.items.length} Items
                       </p>
                     </div>
                   </div>
@@ -104,15 +112,15 @@ export function ApprovalDialog({ open, onOpenChange }: ApprovalDialogProps) {
                       <div key={idx} className="flex justify-between items-start">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-black text-foreground">
-                            {item.quantity}x <span className="font-bold text-muted-foreground/80">{item.menuItem.name}</span>
+                            {item.quantity}× <span className="font-bold text-muted-foreground/80">{item.menuItem.name}</span>
                           </p>
                           {item.notes && (
-                            <p className="text-[11px] text-amber-600 bg-amber-50 px-2 py-1 rounded-lg mt-1 italic border border-amber-100/50 inline-block">
+                            <p className="text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400 px-2 py-1 rounded-lg mt-1 italic border border-amber-100/50 inline-block">
                               "{item.notes}"
                             </p>
                           )}
                         </div>
-                        <span className="text-xs font-black text-muted-foreground/40">{brand.currency}{(item.menuItem.price * item.quantity).toFixed(2)}</span>
+                        <span className="text-xs font-black text-muted-foreground/40 ml-4 shrink-0">{brand.currency}{(item.menuItem.price * item.quantity).toFixed(2)}</span>
                       </div>
                     ))}
                   </div>

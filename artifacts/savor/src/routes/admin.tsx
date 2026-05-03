@@ -398,7 +398,7 @@ function MenuItemsTab() {
       </div>
 
             <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>{isNew ? 'Add Menu Item' : 'Edit Menu Item'}</DialogTitle>
           </DialogHeader>

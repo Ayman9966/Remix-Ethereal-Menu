@@ -149,13 +149,18 @@ function KitchenPage() {
                           <span className="text-xs text-muted-foreground">{getElapsed(order.createdAt)}</span>
                         </div>
 
-                        <div className="space-y-2.5">
+                        <div className="space-y-2">
                           {order.items.map((item, i) => (
-                            <div key={i} className="flex items-center justify-between rounded-xl bg-surface-low px-4 py-2.5">
-                              <span className="text-sm text-foreground">{item.menuItem.name}</span>
-                              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card text-xs font-bold text-primary">
-                                {item.quantity}
-                              </span>
+                            <div key={i} className="rounded-xl bg-surface-low px-4 py-2.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-foreground">{item.menuItem.name}</span>
+                                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card text-xs font-bold text-primary">
+                                  {item.quantity}
+                                </span>
+                              </div>
+                              {item.notes && (
+                                <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400 italic">📝 {item.notes}</p>
+                              )}
                             </div>
                           ))}
                         </div>

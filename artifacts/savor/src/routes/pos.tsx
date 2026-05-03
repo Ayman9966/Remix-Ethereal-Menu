@@ -44,6 +44,13 @@ function POSPage() {
   const active_waiter_calls = waiterCalls.filter(c => !c.acknowledged);
 
   const [activeCategory, setActiveCategory] = useState(categories[0]?.id ?? '');
+
+  useEffect(() => {
+    if (!activeCategory && categories.length > 0) {
+      setActiveCategory(categories[0].id);
+    }
+  }, [categories, activeCategory]);
+
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const defaultType = brand.orderingMode === 'takeaway' ? 'takeaway' : 'dine-in';

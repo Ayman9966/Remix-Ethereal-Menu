@@ -33,7 +33,11 @@ export function WaiterCallsDialog({ open, onOpenChange }: WaiterCallsDialogProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[80vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+      <DialogContent
+        showCloseButton={false}
+        aria-describedby={undefined}
+        className="max-w-xl max-h-[80vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl"
+      >
         <div className="p-6 border-b shrink-0 bg-surface-low/30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -49,9 +53,13 @@ export function WaiterCallsDialog({ open, onOpenChange }: WaiterCallsDialogProps
                 </p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="rounded-xl">
+            <button
+              onClick={() => onOpenChange(false)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-surface-low hover:text-foreground transition-colors"
+              aria-label="Close"
+            >
               <X className="h-5 w-5" />
-            </Button>
+            </button>
           </div>
         </div>
 
@@ -98,14 +106,13 @@ export function WaiterCallsDialog({ open, onOpenChange }: WaiterCallsDialogProps
                       <Check className="h-4 w-4 mr-2" />
                       Done
                     </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      onClick={() => clearCall(call.id)} 
-                      className="rounded-xl h-10 w-10 p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    <button
+                      onClick={() => clearCall(call.id)}
+                      className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                      aria-label="Dismiss call"
                     >
                       <X className="h-4 w-4" />
-                    </Button>
+                    </button>
                   </div>
                 </motion.div>
               ))
