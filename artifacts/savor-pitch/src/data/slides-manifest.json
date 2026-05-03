@@ -20,28 +20,52 @@
     "position": 3,
     "filepath": "src/pages/slides/Solution.tsx",
     "title": "The Platform",
-    "description": "Six connected modules — digital menu, kitchen, POS, board, analytics, admin",
+    "description": "Six connected modules overview grid",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-0004-4000-8000-000000000004",
     "position": 4,
-    "filepath": "src/pages/slides/HowItWorks.tsx",
-    "title": "How It Works",
-    "description": "4-step flow: guest scans QR, order placed, kitchen notified, data recorded",
+    "filepath": "src/pages/slides/DigitalMenu.tsx",
+    "title": "Digital Menu",
+    "description": "QR-based digital menu — no app, live updates, category filtering",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-0005-4000-8000-000000000005",
     "position": 5,
+    "filepath": "src/pages/slides/KitchenPOS.tsx",
+    "title": "Kitchen + POS",
+    "description": "Kitchen display ticket queue and point-of-sale features",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0006-4000-8000-000000000006",
+    "position": 6,
+    "filepath": "src/pages/slides/Analytics.tsx",
+    "title": "Analytics",
+    "description": "Revenue trends, top items, and peak hours dashboard",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0007-4000-8000-000000000007",
+    "position": 7,
+    "filepath": "src/pages/slides/HowItWorks.tsx",
+    "title": "How It Works",
+    "description": "4-step flow: scan, order, kitchen, data",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0008-4000-8000-000000000008",
+    "position": 8,
     "filepath": "src/pages/slides/Stats.tsx",
     "title": "Built for Scale",
     "description": "Key stats: 6 modules, <1s sync, 0 minutes setup",
     "speakerNotes": ""
   },
   {
-    "id": "a1b2c3d4-0006-4000-8000-000000000006",
-    "position": 6,
+    "id": "a1b2c3d4-0009-4000-8000-000000000009",
+    "position": 9,
     "filepath": "src/pages/slides/Closing.tsx",
     "title": "Get Started",
     "description": "Closing CTA — ready to run your restaurant smarter",
