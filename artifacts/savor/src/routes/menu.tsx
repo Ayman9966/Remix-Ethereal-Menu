@@ -571,12 +571,20 @@ function CustomerMenuPage() {
         <button
           onClick={() => setShowMyOrders(true)}
           onMouseEnter={() => setLabelsExpanded(true)}
-          className={`fixed z-40 flex items-center gap-2 rounded-2xl bg-success px-5 py-3.5 text-success-foreground shadow-ambient transition-all hover:shadow-lg active:scale-95 ${
+          className={`fixed z-40 relative flex items-center gap-2.5 rounded-2xl bg-success px-5 py-3.5 text-success-foreground shadow-ambient transition-all hover:shadow-lg active:scale-95 ${
             ordering && cartCount > 0 ? 'bottom-40 right-6' : 'bottom-24 right-6'
           } ${!labelsExpanded ? 'w-[52px] px-0 justify-center' : ''}`}
           aria-label="My orders"
         >
-          <UtensilsCrossed className="h-5 w-5" />
+          <motion.span
+            className="absolute -top-2 -right-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-black text-background"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+          >
+            {myActiveOrders.length}
+          </motion.span>
+          <Receipt className="h-5 w-5 shrink-0" />
           <AnimatePresence mode="popLayout" initial={false}>
             {labelsExpanded && (
               <motion.span 
@@ -584,9 +592,9 @@ function CustomerMenuPage() {
                 animate={{ opacity: 1, width: 'auto' }}
                 exit={{ opacity: 0, width: 0 }}
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
-                className="overflow-hidden whitespace-nowrap text-sm font-medium"
+                className="overflow-hidden whitespace-nowrap text-sm font-bold"
               >
-                My Orders ({myActiveOrders.length})
+                My Orders
               </motion.span>
             )}
           </AnimatePresence>
@@ -596,167 +604,270 @@ function CustomerMenuPage() {
       {/* My Orders Modal */}
       {showMyOrders && (
         <>
-          <div className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm" onClick={() => setShowMyOrders(false)} />
-          <div className="fixed bottom-5 left-5 right-5 z-50 mx-auto max-w-lg animate-in fade-in slide-in-from-bottom-8 rounded-3xl bg-card p-6 shadow-2xl border border-border/50">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-display text-lg font-semibold text-foreground">Order Status</h3>
-              <button onClick={() => setShowMyOrders(false)} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground hover:bg-surface-low">
+          <div className="fixed inset-0 z-40 bg-foreground/30 backdrop-blur-sm" onClick={() => setShowMyOrders(false)} />
+          <div className="fixed bottom-5 left-5 right-5 z-50 mx-auto max-w-lg animate-in fade-in slide-in-from-bottom-8 rounded-3xl bg-card shadow-2xl border border-border/50 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-border/30">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-success/10 flex items-center justify-center">
+                  <Receipt className="h-5 w-5 text-success" />
+                </div>
+                <div>
+                  <h3 className="font-display text-base font-black text-foreground">My Orders</h3>
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">{myActiveOrders.length} active</p>
+                </div>
+              </div>
+              <button onClick={() => setShowMyOrders(false)} className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-surface-low transition-colors">
                 <X className="h-5 w-5" />
               </button>
             </div>
             
-            <div className="max-h-[60vh] space-y-4 overflow-auto py-2">
+            <div className="max-h-[55vh] space-y-3 overflow-auto p-4">
               {myActiveOrders.length === 0 ? (
                 <p className="py-8 text-center text-muted-foreground">No orders in progress.</p>
               ) : (
-                myActiveOrders.map((order: Order) => (
-                  <motion.div 
-                    layout
-                    key={order.id} 
-                    className="overflow-hidden"
-                  >
-                    <div 
-                      className="flex w-full items-center justify-between rounded-xl bg-surface-low p-4 border border-border/50"
+                myActiveOrders.map((order: Order) => {
+                  const isDone = order.status === 'picked' || order.status === 'completed';
+                  const isReady = order.status === 'ready' || order.status === 'ready_to_pickup';
+                  const isPreparing = order.status === 'preparing';
+                  const stepIdx = isDone ? 3 : isReady ? 2 : isPreparing ? 1 : 0;
+                  const steps = [
+                    { label: 'Received', icon: Check },
+                    { label: 'Preparing', icon: ChefHat },
+                    { label: order.orderType === 'takeaway' ? 'Pick Up' : 'Serving', icon: CheckCircle2 },
+                  ];
+                  return (
+                    <motion.div
+                      layout
+                      key={order.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`rounded-2xl border p-4 transition-all ${
+                        isReady ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900/40' :
+                        isPreparing ? 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900/40' :
+                        'bg-surface-low border-border/30'
+                      }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                          order.status === 'ready' || order.status === 'ready_to_pickup' ? 'bg-green-500/10 text-green-600' :
-                          order.status === 'preparing' ? 'bg-blue-500/10 text-blue-600' :
-                          order.status === 'awaiting_approval' ? 'bg-amber-500/10 text-amber-600' :
-                          'bg-muted-foreground/10 text-muted-foreground'
-                        }`}>
-                          {order.status === 'ready' || order.status === 'ready_to_pickup' ? <CheckCircle2 className="h-5 w-5" /> :
-                           order.status === 'preparing' ? <Clock className="h-5 w-5" /> :
-                           order.status === 'awaiting_approval' ? <AlertCircle className="h-5 w-5" /> :
-                           <History className="h-5 w-5" />}
+                      {/* Order header */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-display text-sm font-black text-foreground">
+                            Order #{String(order.orderNumber).padStart(3, '0')}
+                          </span>
+                          {isReady && (
+                            <motion.span
+                              animate={{ scale: [1, 1.1, 1] }}
+                              transition={{ repeat: Infinity, duration: 1.2 }}
+                              className="rounded-full bg-green-500 px-2 py-0.5 text-[10px] font-black text-white uppercase tracking-wide"
+                            >
+                              Ready!
+                            </motion.span>
+                          )}
+                          {isPreparing && (
+                            <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-black text-blue-600 uppercase tracking-wide">
+                              Cooking
+                            </span>
+                          )}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-primary">Order #{String(order.orderNumber).padStart(3, '0')}</span>
-                            <span className={`h-1.5 w-1.5 rounded-full ${
-                              order.status === 'ready' || order.status === 'ready_to_pickup' ? 'bg-green-500 animate-pulse' :
-                              order.status === 'preparing' ? 'bg-blue-500 animate-pulse' :
-                              'bg-muted-foreground'
-                            }`} />
-                          </div>
-                          <p className="text-xs font-bold text-muted-foreground capitalize">
-                            {order.status.replace(/_/g, ' ')}
-                          </p>
-                        </div>
+                        <span className="text-[11px] font-medium text-muted-foreground">{getRelativeTime(new Date(order.createdAt))}</span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <p className="text-[10px] font-medium text-muted-foreground">{getRelativeTime(new Date(order.createdAt))}</p>
-                        </div>
+
+                      {/* Status stepper */}
+                      <div className="flex items-center gap-0">
+                        {steps.map((step, i) => {
+                          const done = stepIdx > i;
+                          const active = stepIdx === i;
+                          const StepIcon = step.icon;
+                          return (
+                            <div key={i} className="flex flex-1 items-center">
+                              <div className="flex flex-col items-center gap-1.5 flex-none">
+                                <div className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all ${
+                                  done ? 'bg-primary border-primary text-primary-foreground' :
+                                  active ? 'border-primary bg-primary/10 text-primary' :
+                                  'border-border/40 bg-surface-low text-muted-foreground/40'
+                                }`}>
+                                  {active && !isDone ? (
+                                    <motion.div
+                                      animate={{ scale: [1, 1.15, 1] }}
+                                      transition={{ repeat: Infinity, duration: 1.5 }}
+                                    >
+                                      <StepIcon className="h-3.5 w-3.5" />
+                                    </motion.div>
+                                  ) : (
+                                    <StepIcon className="h-3.5 w-3.5" />
+                                  )}
+                                </div>
+                                <span className={`text-[9px] font-bold uppercase tracking-wide whitespace-nowrap ${
+                                  done || active ? 'text-foreground' : 'text-muted-foreground/40'
+                                }`}>{step.label}</span>
+                              </div>
+                              {i < steps.length - 1 && (
+                                <div className={`flex-1 h-0.5 mx-1 mb-4 rounded-full transition-all ${
+                                  stepIdx > i ? 'bg-primary' : 'bg-border/30'
+                                }`} />
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    </div>
-                  </motion.div>
-                ))
+                    </motion.div>
+                  );
+                })
               )}
             </div>
             
-            <button
-              onClick={() => setShowMyOrders(false)}
-              className="mt-6 w-full rounded-2xl bg-surface-low py-3 text-sm font-medium text-foreground hover:bg-muted-foreground/10"
-            >
-              Close
-            </button>
+            <div className="p-4 pt-2 border-t border-border/20">
+              <button
+                onClick={() => setShowMyOrders(false)}
+                className="w-full rounded-2xl bg-surface-low py-3 text-sm font-bold text-foreground hover:bg-muted-foreground/10 transition-colors active:scale-[0.98]"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </>
       )}
 
       {/* Floating Call Waiter Button (only when dine-in available) */}
       {(brand.orderingMode === 'dine-in' || brand.orderingMode === 'both') && !showCart && (
-        <button
-          onClick={() => setShowCallWaiter(true)}
-          onMouseEnter={() => setLabelsExpanded(true)}
-          className={`fixed z-40 flex items-center gap-2 rounded-2xl bg-card px-5 py-3.5 text-foreground shadow-ambient transition-all hover:shadow-lg active:scale-95 ${
-            ordering && cartCount > 0 ? 'bottom-24 right-6' : 'bottom-6 right-6'
-          } ${!labelsExpanded ? 'w-[52px] px-0 justify-center' : ''}`}
-          aria-label="Call waiter"
-        >
-          <Bell className="h-5 w-5 text-primary" />
-          <AnimatePresence mode="popLayout" initial={false}>
-            {labelsExpanded && (
-              <motion.span 
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: 'auto' }}
-                exit={{ opacity: 0, width: 0 }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
-                className="overflow-hidden whitespace-nowrap text-sm font-medium"
-              >
-                Call Waiter
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </button>
+        <div className={`fixed z-40 ${ordering && cartCount > 0 ? 'bottom-24 right-6' : 'bottom-6 right-6'}`}>
+          {/* Pulsing ring when not on cooldown */}
+          {!onCooldown && (
+            <span className="absolute inset-0 rounded-2xl bg-primary opacity-25 animate-ping pointer-events-none" />
+          )}
+          <button
+            onClick={() => setShowCallWaiter(true)}
+            onMouseEnter={() => setLabelsExpanded(true)}
+            className={`relative flex items-center gap-2.5 rounded-2xl gradient-primary px-5 py-3.5 text-primary-foreground shadow-ambient transition-all hover:shadow-lg active:scale-95 ${
+              !labelsExpanded ? 'w-[52px] px-0 justify-center' : ''
+            } ${onCooldown ? 'opacity-60' : ''}`}
+            aria-label="Call waiter"
+          >
+            <span className={!onCooldown ? 'animate-bell-ring' : ''}>
+              <Bell className="h-5 w-5" />
+            </span>
+            <AnimatePresence mode="popLayout" initial={false}>
+              {labelsExpanded && (
+                <motion.span 
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: 'auto' }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  className="overflow-hidden whitespace-nowrap text-sm font-bold"
+                >
+                  {onCooldown ? `Wait ${formatCountdown(cooldownRemaining)}` : 'Call Waiter'}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </button>
+        </div>
       )}
 
       {/* Call Waiter Modal */}
       {showCallWaiter && (
         <>
-          <div className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm" onClick={() => setShowCallWaiter(false)} />
-          <div className="fixed bottom-5 left-5 right-5 z-50 mx-auto max-w-lg animate-in fade-in slide-in-from-bottom-8 rounded-3xl bg-card p-6 shadow-2xl border border-border/50">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-display text-lg font-semibold text-foreground">Call a Waiter</h3>
-              <button onClick={() => setShowCallWaiter(false)} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground hover:bg-surface-low">
-                <X className="h-5 w-5" />
+          <div className="fixed inset-0 z-40 bg-foreground/30 backdrop-blur-sm" onClick={() => setShowCallWaiter(false)} />
+          <motion.div
+            initial={{ opacity: 0, y: 40, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+            className="fixed bottom-5 left-5 right-5 z-50 mx-auto max-w-lg rounded-3xl bg-card shadow-2xl border border-border/50 overflow-hidden"
+          >
+            {/* Decorative gradient top strip */}
+            <div className="h-1.5 w-full gradient-primary" />
+
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  {/* Animated bell icon */}
+                  <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl gradient-primary shadow-ambient-sm">
+                    <span className="animate-bell-ring">
+                      <Bell className="h-7 w-7 text-primary-foreground" />
+                    </span>
+                    {!onCooldown && (
+                      <span className="absolute inset-0 rounded-2xl bg-primary opacity-30 animate-ping" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-display text-xl font-black text-foreground">Call a Waiter</h3>
+                    <p className="text-sm text-muted-foreground mt-0.5">We'll send someone right over</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCallWaiter(false)}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-surface-low transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Table selector */}
+              <div className="mb-6">
+                <p className="text-[11px] font-black text-muted-foreground uppercase tracking-widest mb-3">Your Table</p>
+                {lockedTable ? (
+                  <div className="flex items-center justify-center rounded-2xl bg-surface-low py-4 border border-border/20">
+                    <span className="font-display text-4xl font-black text-foreground">{lockedTable}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setCallTable(t => Math.max(1, t - 1))}
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-surface-low text-foreground hover:bg-surface-high transition-colors active:scale-90 text-xl font-bold"
+                    >
+                      −
+                    </button>
+                    <div className="flex-1 flex items-center justify-center rounded-2xl bg-surface-low py-3 border border-border/20">
+                      <span className="font-display text-3xl font-black text-foreground">{callTable}</span>
+                    </div>
+                    <button
+                      onClick={() => setCallTable(t => Math.min(brand.totalTables ?? 20, t + 1))}
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl gradient-primary text-primary-foreground hover:opacity-90 transition-all active:scale-90 text-xl font-bold shadow-ambient-sm"
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* CTA */}
+              <button
+                disabled={onCooldown}
+                onClick={() => {
+                  const res = callWaiter(callTable);
+                  if (res.ok) {
+                    toast.success(`Waiter called to Table ${callTable}`);
+                    setShowCallWaiter(false);
+                  }
+                }}
+                className={`flex w-full items-center justify-center gap-2.5 rounded-2xl py-4 font-bold text-base shadow-ambient-sm transition-all active:scale-[0.98] ${
+                  onCooldown
+                    ? 'bg-surface-low text-muted-foreground cursor-not-allowed'
+                    : 'gradient-primary text-primary-foreground hover:shadow-ambient'
+                }`}
+              >
+                {onCooldown ? (
+                  <>
+                    <Clock className="h-5 w-5" />
+                    Available in {formatCountdown(cooldownRemaining)}
+                  </>
+                ) : (
+                  <>
+                    <span className="animate-bell-ring"><Bell className="h-5 w-5" /></span>
+                    Send Request
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => setShowCallWaiter(false)}
+                className="mt-2.5 flex w-full items-center justify-center rounded-2xl bg-surface-low py-3 text-sm font-bold text-muted-foreground hover:bg-muted-foreground/10 transition-colors active:scale-[0.98]"
+              >
+                Dismiss
               </button>
             </div>
-            <p className="mb-4 text-sm text-muted-foreground">Select your table and we'll send a waiter right over.</p>
-            <div className="mb-5 flex items-center gap-3 rounded-xl bg-surface-low p-3">
-              <span className="text-sm text-muted-foreground">Table</span>
-              {lockedTable ? (
-                <span className="flex-1 rounded-lg bg-card px-3 py-2 text-sm font-semibold text-foreground">
-                  Table {lockedTable}
-                </span>
-              ) : (
-                <select
-                  value={callTable}
-                  onChange={e => setCallTable(Number(e.target.value))}
-                  className="flex-1 rounded-lg bg-card px-3 py-2 text-base font-medium text-foreground outline-none"
-                >
-                  {Array.from({ length: brand.totalTables ?? 20 }, (_, i) => (
-                    <option key={i + 1} value={i + 1}>Table {i + 1}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <button
-              disabled={onCooldown}
-              onClick={() => {
-                const res = callWaiter(callTable);
-                if (res.ok) {
-                  toast.success(`Waiter called to Table ${callTable}`);
-                  setShowCallWaiter(false);
-                }
-              }}
-              className={`flex w-full items-center justify-center gap-2 rounded-2xl py-4 font-medium shadow-ambient-sm transition-all active:scale-[0.98] ${
-                onCooldown
-                  ? 'bg-surface-low text-muted-foreground cursor-not-allowed'
-                  : 'bg-primary text-primary-foreground hover:shadow-ambient'
-              }`}
-            >
-              {onCooldown ? (
-                <>
-                  <Clock className="h-4 w-4" />
-                  Available in {formatCountdown(cooldownRemaining)}
-                </>
-              ) : (
-                <>
-                  <Bell className="h-4 w-4" />
-                  Send Request
-                </>
-              )}
-            </button>
-            <button
-              onClick={() => setShowCallWaiter(false)}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-surface-low py-3 text-sm font-medium text-foreground hover:bg-muted-foreground/10 active:scale-[0.98]"
-            >
-              <X className="h-4 w-4" />
-              Close
-            </button>
-          </div>
+          </motion.div>
         </>
       )}
 
