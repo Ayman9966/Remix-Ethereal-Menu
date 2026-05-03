@@ -158,7 +158,7 @@ class SyncEngine {
       case 'UPSERT_CATEGORY':
         return upsertCategory(op.payload);
       case 'BULK_UPSERT_CATEGORIES':
-        return upsertCategory(op.payload);
+        return upsertCategory(Array.isArray(op.payload) ? op.payload : [op.payload]);
       case 'DELETE_CATEGORY':
         return deleteCategory(op.payload.id);
       case 'UPSERT_BRAND':

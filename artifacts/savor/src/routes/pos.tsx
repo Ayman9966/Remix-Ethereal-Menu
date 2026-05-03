@@ -3,9 +3,10 @@ import { AppHeader } from '@/components/AppHeader';
 import { ApprovalDialog } from '@/components/ApprovalDialog';
 import { WaiterCallsDialog } from '@/components/WaiterCallsDialog';
 import { useMenu } from '@/hooks/use-menu-context';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { X, Send, Package, Bell, Check, Printer, ShoppingCart, Plus, Minus, ChevronDown, ChevronUp, ChevronRight } from 'lucide-react';
+import { X, Send, Package, Bell, Check, Printer, ShoppingCart, Plus, Minus, ChevronDown, ChevronUp, WifiOff, MessageSquare } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { MenuItem, OrderItem, Order } from '@/lib/menu-data';
@@ -36,6 +37,7 @@ export const Route = createFileRoute('/pos')({
 
 function POSPage() {
   const { items, categories, addOrder, brand, searchQuery, orders, waiterCalls, posViewMode, setPosViewMode } = useMenu();
+  const { isOnline } = useOnlineStatus();
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [showWaiterCallsDialog, setShowWaiterCallsDialog] = useState(false);
   const awaiting_orders = orders.filter((o) => o.status === 'awaiting_approval');
@@ -43,6 +45,7 @@ function POSPage() {
 
   const [activeCategory, setActiveCategory] = useState(categories[0]?.id ?? '');
   const [cart, setCart] = useState<OrderItem[]>([]);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const defaultType = brand.orderingMode === 'takeaway' ? 'takeaway' : 'dine-in';
   const [orderType, setOrderType] = useState<'dine-in' | 'takeaway'>(defaultType);
   const [tableNumber, setTableNumber] = useState(1);
@@ -98,7 +101,7 @@ function POSPage() {
     setCart(prev => {
       const existing = prev.find(c => c.menuItem.id === item.id);
       if (existing) return prev.map(c => c.menuItem.id === item.id ? { ...c, quantity: c.quantity + 1 } : c);
-      return [...prev, { menuItem: item, quantity: 1 }];
+      return [...prev, { menuItem: item, quantity: 1, notes: '' }];
     });
   };
 
@@ -110,21 +113,30 @@ function POSPage() {
     }).filter(Boolean));
   };
 
-  const removeFromCart = (id: string) => setCart(prev => prev.filter(c => c.menuItem.id !== id));
+  const updateNote = (id: string, note: string) => {
+    setCart(prev => prev.map(c => c.menuItem.id === id ? { ...c, notes: note } : c));
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart(prev => prev.filter(c => c.menuItem.id !== id));
+    if (editingNoteId === id) setEditingNoteId(null);
+  };
 
   const subtotal = cart.reduce((sum, c) => sum + c.menuItem.price * c.quantity, 0);
+  const hasItems = cart.length > 0;
   
-  const shouldApplyTax = brand.taxEnabled && (orderType === 'dine-in' ? brand.taxApplyDineIn : brand.taxApplyTakeaway);
+  // Only apply fees when cart has items — avoids confusing non-zero total on empty cart
+  const shouldApplyTax = hasItems && brand.taxEnabled && (orderType === 'dine-in' ? brand.taxApplyDineIn : brand.taxApplyTakeaway);
   const tax = shouldApplyTax 
     ? (brand.taxType === 'percentage' ? (subtotal * (brand.taxRate / 100)) : brand.taxRate)
     : 0;
 
-  const shouldApplyServiceCharge = brand.serviceChargeEnabled && (orderType === 'dine-in' ? brand.serviceChargeApplyDineIn : brand.serviceChargeApplyTakeaway);
+  const shouldApplyServiceCharge = hasItems && brand.serviceChargeEnabled && (orderType === 'dine-in' ? brand.serviceChargeApplyDineIn : brand.serviceChargeApplyTakeaway);
   const serviceCharge = shouldApplyServiceCharge
     ? (brand.serviceChargeType === 'percentage' ? (subtotal * (brand.serviceChargeRate / 100)) : brand.serviceChargeRate)
     : 0;
 
-  const shouldApplyAdditionalFee = brand.additionalFeeEnabled && (orderType === 'dine-in' ? brand.additionalFeeApplyDineIn : brand.additionalFeeApplyTakeaway);
+  const shouldApplyAdditionalFee = hasItems && brand.additionalFeeEnabled && (orderType === 'dine-in' ? brand.additionalFeeApplyDineIn : brand.additionalFeeApplyTakeaway);
   const additionalFee = shouldApplyAdditionalFee
     ? (brand.additionalFeeType === 'percentage' ? (subtotal * (brand.additionalFeeAmount / 100)) : brand.additionalFeeAmount)
     : 0;
@@ -137,15 +149,17 @@ function POSPage() {
 
   const sendOrder = () => {
     if (cart.length === 0) return;
+    const now = new Date();
+    const orderId = `ord-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const orderData = {
-      id: `ord-${Date.now()}`,
+      id: orderId,
       items: cart,
       status: 'pending' as const,
       orderType,
       tableNumber: orderType === 'dine-in' ? tableNumber : undefined,
       customerPhone: orderType === 'takeaway' ? customerPhone : undefined,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: now,
+      updatedAt: now,
       total,
       subtotal,
       taxAmount: tax,
@@ -154,13 +168,19 @@ function POSPage() {
     };
 
     addOrder(orderData);
-    toast.success("Order sent to kitchen successfully!");
+
+    if (isOnline) {
+      toast.success("Order sent to kitchen!");
+    } else {
+      toast.warning("Offline — order saved locally and will sync when reconnected.", {
+        duration: 4000,
+      });
+    }
 
     if (brand.autoPrintInvoice) {
       const optimisticOrderNumber = brand.nextOrderNumber;
       const printableOrder: Order = {
         ...orderData,
-        id: `temp-${Date.now()}`,
         orderNumber: optimisticOrderNumber,
       };
       setSelectedOrder(printableOrder);
@@ -171,6 +191,7 @@ function POSPage() {
     }
 
     setCart([]);
+    setEditingNoteId(null);
     setCustomerPhone('');
     setOrderSent(true);
     setTimeout(() => setOrderSent(false), 2000);
@@ -184,6 +205,12 @@ function POSPage() {
         onOpenWaiterCalls={() => setShowWaiterCallsDialog(true)}
         waiterCallsCount={active_waiter_calls.length}
       />
+      {!isOnline && (
+        <div className="flex items-center gap-2 bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 text-amber-700 dark:text-amber-400">
+          <WifiOff className="h-4 w-4 shrink-0" />
+          <p className="text-xs font-medium">Offline mode — orders will be saved locally and synced when connection is restored</p>
+        </div>
+      )}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <div className="flex-1 flex min-h-0 overflow-hidden">
         {posViewMode === 'history' ? (
@@ -332,30 +359,58 @@ function POSPage() {
             </div>
           )}
 
-          <div className="flex-1 overflow-auto space-y-3">
+          <div className="flex-1 overflow-auto space-y-2">
             {cart.length === 0 ? (
-              <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-                Tap items to add to order
+              <div className="flex h-32 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+                <ShoppingCart className="h-8 w-8 opacity-30" />
+                <span>Tap items to add to order</span>
               </div>
             ) : (
               cart.map(c => (
-                <div key={c.menuItem.id} className="flex items-center gap-3 rounded-xl bg-surface-low p-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{c.menuItem.name}</p>
-                    <p className="text-xs text-muted-foreground">{brand.currency}{(c.menuItem.price * c.quantity).toFixed(2)}</p>
+                <div key={c.menuItem.id} className="rounded-xl bg-surface-low overflow-hidden">
+                  <div className="flex items-center gap-3 p-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{c.menuItem.name}</p>
+                      <p className="text-xs text-muted-foreground">{brand.currency}{(c.menuItem.price * c.quantity).toFixed(2)}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setEditingNoteId(editingNoteId === c.menuItem.id ? null : c.menuItem.id)}
+                        title="Add note"
+                        className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${
+                          c.notes ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:bg-card'
+                        }`}
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => updateQty(c.menuItem.id, -1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-card text-foreground hover:bg-surface-high">
+                        <Minus className="h-3.5 w-3.5" />
+                      </button>
+                      <span className="w-6 text-center text-sm font-semibold">{c.quantity}</span>
+                      <button onClick={() => updateQty(c.menuItem.id, 1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-card text-foreground hover:bg-surface-high">
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => removeFromCart(c.menuItem.id)} className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <button onClick={() => updateQty(c.menuItem.id, -1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-card text-foreground hover:bg-surface-high">
-                      <Minus className="h-3.5 w-3.5" />
-                    </button>
-                    <span className="w-6 text-center text-sm font-semibold">{c.quantity}</span>
-                    <button onClick={() => updateQty(c.menuItem.id, 1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-card text-foreground hover:bg-surface-high">
-                      <Plus className="h-3.5 w-3.5" />
-                    </button>
-                    <button onClick={() => removeFromCart(c.menuItem.id)} className="ml-1 flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                  {editingNoteId === c.menuItem.id && (
+                    <div className="px-3 pb-3">
+                      <input
+                        autoFocus
+                        type="text"
+                        placeholder="Special instructions (e.g. no onions)..."
+                        value={c.notes ?? ''}
+                        onChange={e => updateNote(c.menuItem.id, e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && setEditingNoteId(null)}
+                        className="w-full rounded-lg bg-card px-3 py-1.5 text-xs text-foreground outline-none border border-border/20 focus:border-primary/40 placeholder:text-muted-foreground/50"
+                      />
+                    </div>
+                  )}
+                  {c.notes && editingNoteId !== c.menuItem.id && (
+                    <p className="px-3 pb-2 text-[10px] text-primary/70 italic truncate">📝 {c.notes}</p>
+                  )}
                 </div>
               ))
             )}
@@ -420,9 +475,15 @@ function POSPage() {
               size="lg" 
               onClick={sendOrder} 
               disabled={cart.length === 0 || (orderType === 'takeaway' && !customerPhone.trim())}
+              variant={!isOnline && cart.length > 0 ? 'outline' : 'default'}
             >
-              <Send className="h-4 w-4" />
-              {orderSent ? 'Order Sent!' : 'Send to Kitchen'}
+              {orderSent ? (
+                <><Check className="h-4 w-4" /> {isOnline ? 'Order Sent!' : 'Order Queued!'}</>
+              ) : isOnline ? (
+                <><Send className="h-4 w-4" /> Send to Kitchen</>
+              ) : (
+                <><WifiOff className="h-4 w-4" /> Queue Order (Offline)</>
+              )}
             </Button>
           </div>
         </div>

@@ -113,7 +113,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     queryKey: ['orders'],
     queryFn: () => fetchOrders(200),
     initialData: () => loadFromStorage('orders', sampleOrders),
-    refetchInterval: 30000,
+    refetchInterval: 15000,
   });
   const serverOrders = ordersQuery.data ?? sampleOrders;
 
@@ -145,9 +145,12 @@ export function MenuProvider({ children }: { children: ReactNode }) {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [posViewMode, setPosViewMode] = useState<'pos' | 'history'>('pos');
-  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('synced');
-  const [pendingChangesCount, setPendingChangesCount] = useState(0);
-  const [syncQueue, setSyncQueue] = useState<any[]>([]); 
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>(
+    !navigator.onLine ? 'offline' : 'synced'
+  );
+  const [pendingChangesCount, setPendingChangesCount] = useState(syncEngine.getPendingCount());
+  // Initialize from the persisted sync engine queue so pending orders show immediately on reload
+  const [syncQueue, setSyncQueue] = useState<any[]>(syncEngine.getQueue());
   const [recentlyCompleted, setRecentlyCompleted] = useState<Record<string, { status: string, timestamp: number }>>({});
   
   const lastSeenIds = useRef<Set<string>>(new Set(waiterCalls.map((c: any) => c.id)));
@@ -322,12 +325,23 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(id);
   }, []);
 
+  // Keep syncStatus in sync with isOnline so the UI reflects connectivity immediately
+  useEffect(() => {
+    if (!isOnline) {
+      setSyncStatus('offline');
+    } else if (pendingChangesCount === 0) {
+      setSyncStatus('synced');
+    }
+  }, [isOnline, pendingChangesCount]);
+
   // Sync when coming back online
   useEffect(() => {
     if (isOnline) {
       syncEngine.processQueue();
+      // Refresh data that may have changed while we were offline
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
     }
-  }, [isOnline]);
+  }, [isOnline, queryClient]);
 
   // Supabase Realtime: keep local state in sync across tabs/devices
   useEffect(() => {
@@ -472,7 +486,6 @@ export function MenuProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const addOrder = useCallback((order: Omit<Order, 'orderNumber'>) => {
-    const localId = `ord-${Date.now()}`;
     let optimisticOrderNumber = 1;
     
     // We update the brand query data optimistically for the order number
@@ -482,7 +495,9 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       return { ...prev, nextOrderNumber: optimisticOrderNumber + 1 };
     });
 
-    const newOrder = { ...order, id: localId, orderNumber: optimisticOrderNumber } as Order;
+    // Use the id from the caller (no second localId — avoids id mismatch between
+    // local UI state and what the sync engine tracks)
+    const newOrder = { ...order, orderNumber: optimisticOrderNumber } as Order;
     
     queryClient.setQueryData(['orders'], (prev: Order[] | undefined) => [newOrder, ...(prev || [])]);
     syncEngine.enqueue('CREATE_ORDER', order);
