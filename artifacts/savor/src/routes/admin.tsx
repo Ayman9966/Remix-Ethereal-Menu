@@ -734,14 +734,20 @@ function SortableCategoryItem({ cat, onEdit, onRemove }: SortableCategoryItemPro
 }
 
 function SettingsTab() {
+  const { brand, updateBrand } = useMenu();
+  const [form, setForm] = useState(brand);
   const [isClearing, setIsClearing] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
+
+  const set = <K extends keyof typeof form>(key: K, value: typeof form[K]) =>
+    setForm(prev => ({ ...prev, [key]: value }));
 
   const handleClearCache = async () => {
     setIsClearing(true);
     try {
       const response = await fetch('/api/cache/invalidate', { method: 'POST' });
       if (response.ok) {
-        toast.success("Cache cleared successfully. Refreshing page...");
+        toast.success("Cache cleared. Refreshing page...");
         setTimeout(() => window.location.reload(), 1000);
       } else {
         toast.error("Failed to clear cache.");
@@ -754,10 +760,7 @@ function SettingsTab() {
     }
   };
 
-  const [showResetDialog, setShowResetDialog] = useState(false);
-
   const handleReset = () => {
-    // We use dynamic import for storage utility
     import('@/lib/storage').then(m => {
       m.clearStorage();
       toast.success("All local data cleared. Restarting...");
@@ -766,76 +769,315 @@ function SettingsTab() {
   };
 
   return (
-    <div className="space-y-6 pb-20">
-      <Card>
-        <CardContent className="p-6">
-          <h3 className="font-display text-lg font-bold text-foreground">System Maintenance</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Perform technical operations and manage application state.</p>
-          
-          <div className="mt-6 flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-surface-low p-4">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-primary/10 p-2">
-                  <RotateCw className={`h-5 w-5 text-primary ${isClearing ? 'animate-spin' : ''}`} />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">Server-Side Multi-User Cache</p>
-                  <p className="text-xs text-muted-foreground">The menu is cached for 5 minutes on the server for performance. It is now automatically cleared whenever you save changes.</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500">
-                  <Check className="h-3 w-3" />
-                  Auto-Sync Active
-                </span>
-                <Button 
-                  variant="outline" 
-                  onClick={handleClearCache} 
-                  disabled={isClearing}
-                  className="rounded-xl border-primary/20 hover:bg-primary/10 h-10 px-6 shrink-0"
-                >
-                  {isClearing ? 'Clearing...' : 'Force Refresh'}
-                </Button>
+    <div className="space-y-5 pb-20">
+
+      {/* Receipts & Printing */}
+      <div className="rounded-2xl bg-card p-6 shadow-ambient-sm">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
+            <Printer className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Receipts & Printing</p>
+            <p className="text-xs text-muted-foreground">Invoice auto-print and thermal paper size</p>
+          </div>
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between rounded-xl bg-surface-low px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-foreground">Auto Print Invoice</p>
+              <p className="text-xs text-muted-foreground">Print automatically when order is sent to kitchen</p>
+            </div>
+            <button onClick={() => set('autoPrintInvoice', !form.autoPrintInvoice)} className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${form.autoPrintInvoice ? 'bg-primary' : 'bg-muted-foreground/30'}`}>
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${form.autoPrintInvoice ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+          {form.autoPrintInvoice && (
+            <div className="rounded-xl bg-surface-low px-4 py-3">
+              <label className="mb-2 block text-xs font-medium text-muted-foreground">Paper Size</label>
+              <div className="flex gap-2 rounded-xl bg-card p-1">
+                {(['58mm', '80mm'] as const).map(size => (
+                  <button key={size} onClick={() => set('invoiceSize', size)} className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all ${form.invoiceSize === size ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'}`}>
+                    {size}
+                  </button>
+                ))}
               </div>
             </div>
+          )}
+        </div>
+      </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-destructive/5 p-4 border border-destructive/10">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-destructive/10 p-2">
-                  <Trash2 className="h-5 w-5 text-destructive" />
+      {/* Board Display */}
+      <div className="rounded-2xl bg-card p-6 shadow-ambient-sm">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
+            <Maximize className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Board Display</p>
+            <p className="text-xs text-muted-foreground">Signage template, speed, and layout for the /board screen</p>
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="mb-2 block text-xs font-medium text-muted-foreground">Template</label>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { id: 1, label: 'Template 1', desc: 'Dark Cinematic Grid', preview: '🎬' },
+                { id: 2, label: 'Template 2', desc: 'Grand Spotlight', preview: '✨' },
+              ].map(t => (
+                <button key={t.id} type="button" onClick={() => set('boardTemplate', t.id as 1 | 2)} className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all ${form.boardTemplate === t.id ? 'border-primary bg-primary/5 ring-1 ring-primary/30' : 'border-border/40 bg-surface-low hover:border-primary/30'}`}>
+                  <span className="text-2xl">{t.preview}</span>
+                  <div>
+                    <p className="text-sm font-bold text-foreground">{t.label}</p>
+                    <p className="text-[11px] text-muted-foreground">{t.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-xl bg-surface-low px-4 py-3">
+            <label className="mb-2 block text-xs font-medium text-muted-foreground">Rotation Speed — {form.boardCycleSeconds}s per category</label>
+            <input type="range" min={5} max={120} step={5} value={form.boardCycleSeconds} onChange={e => set('boardCycleSeconds', parseInt(e.target.value) || 15)} className="w-full accent-primary" />
+            <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+              <span>5s</span><span>120s</span>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl bg-surface-low px-4 py-3">
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Columns</label>
+              <div className="flex items-center gap-2">
+                <Hash className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <input type="number" min={2} max={4} value={form.boardColumns} onChange={e => set('boardColumns', Math.min(4, Math.max(2, parseInt(e.target.value) || 3)))} className="w-full rounded-lg bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+            </div>
+            <div className="rounded-xl bg-surface-low px-4 py-3">
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Background Color</label>
+              <div className="flex items-center gap-2">
+                <input type="color" value={form.boardBackgroundColor} onChange={e => set('boardBackgroundColor', e.target.value)} className="h-8 w-8 rounded-lg border-0 bg-transparent cursor-pointer shrink-0" />
+                <input value={form.boardBackgroundColor} onChange={e => set('boardBackgroundColor', e.target.value)} className="flex-1 rounded-lg bg-card px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Visible on board</p>
+            {([
+              { key: 'boardShowPhotos', label: 'Item photos' },
+              { key: 'boardShowPrice', label: 'Price' },
+              { key: 'boardShowDescription', label: 'Description' },
+              { key: 'boardShowPrepTime', label: 'Prep time' },
+            ] as const).map(({ key, label }) => (
+              <div key={key} className="flex items-center justify-between rounded-xl bg-surface-low px-4 py-2.5">
+                <span className="text-sm text-foreground">{label}</span>
+                <button onClick={() => set(key, !form[key])} className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${form[key] ? 'bg-primary' : 'bg-muted-foreground/30'}`}>
+                  <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${form[key] ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <a href="/board" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline">
+            <ExternalLink className="h-3 w-3" /> Open Board Display
+          </a>
+        </div>
+      </div>
+
+      {/* Tax, Service & Fees */}
+      <div className="rounded-2xl bg-card p-6 shadow-ambient-sm">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
+            <ReceiptText className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Tax, Service & Fees</p>
+            <p className="text-xs text-muted-foreground">Applied automatically to every order total</p>
+          </div>
+        </div>
+        <div className="space-y-4">
+          {/* Tax */}
+          <div className="rounded-xl border border-border/30 bg-surface-low p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Percent className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">Tax</span>
+              </div>
+              <button onClick={() => set('taxEnabled', !form.taxEnabled)} className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${form.taxEnabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}>
+                <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${form.taxEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+            {form.taxEnabled && (
+              <div className="mt-4 space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="flex rounded-lg bg-card p-1">
+                    {(['percentage', 'fixed'] as const).map(type => (
+                      <button key={type} onClick={() => set('taxType', type)} className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${form.taxType === type ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'}`}>
+                        {type === 'percentage' ? '% Percentage' : '# Fixed'}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="relative">
+                    <input type="number" step="0.01" value={form.taxRate} onChange={e => set('taxRate', parseFloat(e.target.value) || 0)} className="w-full rounded-lg bg-card px-4 py-1.5 pr-10 text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="Rate" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{form.taxType === 'percentage' ? '%' : form.currency}</span>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">Reset to Factory Defaults</p>
-                  <p className="text-xs text-muted-foreground">Wipe all local settings and menu data. This cannot be undone.</p>
+                <div className="flex items-center gap-4">
+                  <span className="text-[11px] font-medium text-muted-foreground uppercase">Apply to:</span>
+                  {[{ key: 'taxApplyDineIn' as const, label: 'Dine In' }, { key: 'taxApplyTakeaway' as const, label: 'Takeaway' }].map(({ key, label }) => (
+                    <label key={key} className="flex items-center gap-1.5 cursor-pointer">
+                      <input type="checkbox" checked={form[key]} onChange={e => set(key, e.target.checked)} className="rounded border-border text-primary h-3.5 w-3.5" />
+                      <span className="text-[11px] text-muted-foreground">{label}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
-              <Button 
-                variant="destructive" 
-                onClick={() => setShowResetDialog(true)}
-                className="rounded-xl h-10 px-6 shrink-0"
-              >
-                Reset Data
+            )}
+          </div>
+
+          {/* Service Charge */}
+          <div className="rounded-xl border border-border/30 bg-surface-low p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Coins className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">Service Charge</span>
+              </div>
+              <button onClick={() => set('serviceChargeEnabled', !form.serviceChargeEnabled)} className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${form.serviceChargeEnabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}>
+                <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${form.serviceChargeEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+            {form.serviceChargeEnabled && (
+              <div className="mt-4 space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="flex rounded-lg bg-card p-1">
+                    {(['percentage', 'fixed'] as const).map(type => (
+                      <button key={type} onClick={() => set('serviceChargeType', type)} className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${form.serviceChargeType === type ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'}`}>
+                        {type === 'percentage' ? '% Percentage' : '# Fixed'}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="relative">
+                    <input type="number" step="0.01" value={form.serviceChargeRate} onChange={e => set('serviceChargeRate', parseFloat(e.target.value) || 0)} className="w-full rounded-lg bg-card px-4 py-1.5 pr-10 text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="Rate" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{form.serviceChargeType === 'percentage' ? '%' : form.currency}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-[11px] font-medium text-muted-foreground uppercase">Apply to:</span>
+                  {[{ key: 'serviceChargeApplyDineIn' as const, label: 'Dine In' }, { key: 'serviceChargeApplyTakeaway' as const, label: 'Takeaway' }].map(({ key, label }) => (
+                    <label key={key} className="flex items-center gap-1.5 cursor-pointer">
+                      <input type="checkbox" checked={form[key]} onChange={e => set(key, e.target.checked)} className="rounded border-border text-primary h-3.5 w-3.5" />
+                      <span className="text-[11px] text-muted-foreground">{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Additional Fee */}
+          <div className="rounded-xl border border-border/30 bg-surface-low p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Plus className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">Additional Fee</span>
+              </div>
+              <button onClick={() => set('additionalFeeEnabled', !form.additionalFeeEnabled)} className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${form.additionalFeeEnabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}>
+                <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${form.additionalFeeEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+            {form.additionalFeeEnabled && (
+              <div className="mt-4 space-y-3">
+                <input value={form.additionalFeeName} onChange={e => set('additionalFeeName', e.target.value)} placeholder="e.g. Eco Fee" className="w-full rounded-lg bg-card px-4 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="flex rounded-lg bg-card p-1">
+                    {(['percentage', 'fixed'] as const).map(type => (
+                      <button key={type} onClick={() => set('additionalFeeType', type)} className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${form.additionalFeeType === type ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'}`}>
+                        {type === 'percentage' ? '% Percentage' : '# Fixed'}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="relative">
+                    <input type="number" step="0.01" value={form.additionalFeeAmount} onChange={e => set('additionalFeeAmount', parseFloat(e.target.value) || 0)} className="w-full rounded-lg bg-card px-4 py-1.5 pr-10 text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="Amount" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{form.additionalFeeType === 'percentage' ? '%' : form.currency}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-[11px] font-medium text-muted-foreground uppercase">Apply to:</span>
+                  {[{ key: 'additionalFeeApplyDineIn' as const, label: 'Dine In' }, { key: 'additionalFeeApplyTakeaway' as const, label: 'Takeaway' }].map(({ key, label }) => (
+                    <label key={key} className="flex items-center gap-1.5 cursor-pointer">
+                      <input type="checkbox" checked={form[key]} onChange={e => set(key, e.target.checked)} className="rounded border-border text-primary h-3.5 w-3.5" />
+                      <span className="text-[11px] text-muted-foreground">{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Save Settings */}
+      <Button onClick={() => { updateBrand(form); toast.success("Settings saved"); }} className="w-full">
+        <Save className="h-4 w-4" /> Save Settings
+      </Button>
+
+      {/* System Maintenance */}
+      <div className="rounded-2xl bg-card p-6 shadow-ambient-sm">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted/30">
+            <Settings className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">System Maintenance</p>
+            <p className="text-xs text-muted-foreground">Cache management and data operations</p>
+          </div>
+        </div>
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl bg-surface-low p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-primary/10 p-2 shrink-0">
+                <RotateCw className={`h-4 w-4 text-primary ${isClearing ? 'animate-spin' : ''}`} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Server Cache</p>
+                <p className="text-xs text-muted-foreground">Auto-cleared on every save. Force-refresh if customers see stale menus.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500">
+                <Check className="h-3 w-3" /> Auto-Sync
+              </span>
+              <Button variant="outline" onClick={handleClearCache} disabled={isClearing} size="sm">
+                {isClearing ? 'Clearing...' : 'Force Refresh'}
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-destructive/10 bg-destructive/5 p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-destructive/10 p-2 shrink-0">
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Reset to Factory Defaults</p>
+                <p className="text-xs text-muted-foreground">Wipe all local data. Cannot be undone.</p>
+              </div>
+            </div>
+            <Button variant="destructive" size="sm" onClick={() => setShowResetDialog(true)} className="shrink-0">
+              Reset Data
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will wipe all your local menu items, categories, and branding settings. 
+              This will wipe all your local menu items, categories, and branding settings.
               Only data already synced to the server will remain in the cloud.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleReset}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleReset} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Reset Everything
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -849,560 +1091,151 @@ function BrandingTab() {
   const { brand, updateBrand } = useMenu();
   const [form, setForm] = useState(brand);
 
+  const set = <K extends keyof typeof form>(key: K, value: typeof form[K]) =>
+    setForm(prev => ({ ...prev, [key]: value }));
+
   return (
-    <Card>
-      <CardContent className="grid gap-5 p-6 sm:grid-cols-2">
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Restaurant Name</label>
-          <input value={form.restaurantName} onChange={e => setForm({ ...form, restaurantName: e.target.value })} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Tagline</label>
-          <input value={form.tagline} onChange={e => setForm({ ...form, tagline: e.target.value })} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Accent Color</label>
-          <div className="flex items-center gap-3">
-            <input type="color" value={form.accentColor} onChange={e => setForm({ ...form, accentColor: e.target.value })} className="h-10 w-10 rounded-xl border-0 bg-transparent cursor-pointer" />
-            <input value={form.accentColor} onChange={e => setForm({ ...form, accentColor: e.target.value })} className="flex-1 rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
+    <div className="space-y-5 pb-20">
+
+      {/* Identity */}
+      <div className="rounded-2xl bg-card p-6 shadow-ambient-sm">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
+            <UtensilsCrossed className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Restaurant Identity</p>
+            <p className="text-xs text-muted-foreground">Public-facing name, tagline, and logo</p>
           </div>
         </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Currency Symbol</label>
-          <input value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value })} placeholder="$" className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Total Tables</label>
-          <div className="flex items-center gap-3">
-            <Hash className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <input type="number" min={1} max={200} value={form.totalTables ?? 20} onChange={e => setForm({ ...form, totalTables: parseInt(e.target.value) || 1 })} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Restaurant Name</label>
+            <input value={form.restaurantName} onChange={e => set('restaurantName', e.target.value)} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
           </div>
-        </div>
-        <div className="sm:col-span-2">
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Menu Scale — {form.menuScale}%</label>
-          <div className="flex items-center gap-4">
-            <Maximize className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <input
-              type="range"
-              min={70}
-              max={130}
-              step={5}
-              value={form.menuScale}
-              onChange={e => setForm({ ...form, menuScale: parseInt(e.target.value) })}
-              className="flex-1 accent-primary"
-            />
-            <button
-              onClick={() => setForm({ ...form, menuScale: 100 })}
-              className="rounded-lg bg-surface-low px-3 py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Reset
-            </button>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Tagline</label>
+            <input value={form.tagline} onChange={e => set('tagline', e.target.value)} className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
           </div>
-        </div>
-        <div className="sm:col-span-2">
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Hero Image URL (optional)</label>
-          <div className="flex items-center gap-3">
-            <ImageIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <input value={form.heroImageUrl ?? ''} onChange={e => setForm({ ...form, heroImageUrl: e.target.value || undefined })} placeholder="https://example.com/hero.jpg" className="flex-1 rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
-          </div>
-          {form.heroImageUrl && (
-            <img src={form.heroImageUrl} alt="Hero preview" className="mt-3 h-32 w-full rounded-xl object-cover" />
-          )}
-        </div>
-        <div className="sm:col-span-2">
-          <div className="flex items-center justify-between rounded-2xl bg-surface-low p-4">
+          <div className="sm:col-span-2">
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Logo URL <span className="text-muted-foreground/50">(optional)</span></label>
             <div className="flex items-center gap-3">
-              <ShoppingCart className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-medium text-foreground">Online Ordering</p>
-                <p className="text-xs text-muted-foreground">Allow customers to place orders from the digital menu</p>
-              </div>
+              <ImageIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <input value={form.logoUrl ?? ''} onChange={e => set('logoUrl', e.target.value || undefined)} placeholder="https://example.com/logo.png" className="flex-1 rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
             </div>
-            <button
-              onClick={() => setForm({ ...form, onlineOrderingEnabled: !form.onlineOrderingEnabled })}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
-                form.onlineOrderingEnabled ? 'bg-primary' : 'bg-muted-foreground/30'
-              }`}
-            >
-              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                form.onlineOrderingEnabled ? 'translate-x-6' : 'translate-x-1'
-              }`} />
-            </button>
+            {form.logoUrl && (
+              <div className="mt-3 flex items-center gap-3">
+                <img src={form.logoUrl} alt="Logo preview" className="h-14 w-14 rounded-xl object-contain border border-border bg-surface-low p-1" />
+                <p className="text-xs text-muted-foreground">Logo preview — appears in the menu header</p>
+              </div>
+            )}
+          </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Hero Image URL <span className="text-muted-foreground/50">(optional)</span></label>
+            <div className="flex items-center gap-3">
+              <ImageIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <input value={form.heroImageUrl ?? ''} onChange={e => set('heroImageUrl', e.target.value || undefined)} placeholder="https://example.com/hero.jpg" className="flex-1 rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+            {form.heroImageUrl && (
+              <img src={form.heroImageUrl} alt="Hero preview" className="mt-3 h-32 w-full rounded-xl object-cover" />
+            )}
           </div>
         </div>
-        <div className="sm:col-span-2">
-          <div className="rounded-2xl bg-surface-low p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <Package className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-medium text-foreground">Ordering Mode</p>
-                <p className="text-xs text-muted-foreground">Control which order types are available</p>
-              </div>
+      </div>
+
+      {/* Appearance */}
+      <div className="rounded-2xl bg-card p-6 shadow-ambient-sm">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
+            <Palette className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Appearance</p>
+            <p className="text-xs text-muted-foreground">Accent color, currency symbol, and menu scale</p>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Accent Color</label>
+            <div className="flex items-center gap-3">
+              <input type="color" value={form.accentColor} onChange={e => set('accentColor', e.target.value)} className="h-10 w-10 rounded-xl border-0 bg-transparent cursor-pointer shrink-0" />
+              <input value={form.accentColor} onChange={e => set('accentColor', e.target.value)} className="flex-1 rounded-xl bg-surface-low px-4 py-2.5 text-sm font-mono outline-none focus:ring-2 focus:ring-primary" />
             </div>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Currency Symbol</label>
+            <input value={form.currency} onChange={e => set('currency', e.target.value)} placeholder="$" className="w-full rounded-xl bg-surface-low px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Menu Scale — {form.menuScale}%</label>
+            <div className="flex items-center gap-4">
+              <Maximize className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <input type="range" min={70} max={130} step={5} value={form.menuScale} onChange={e => set('menuScale', parseInt(e.target.value))} className="flex-1 accent-primary" />
+              <button onClick={() => set('menuScale', 100)} className="rounded-lg bg-surface-low px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Reset
+              </button>
+            </div>
+            <div className="mt-1 flex justify-between px-8 text-[10px] text-muted-foreground">
+              <span>70%</span><span>100%</span><span>130%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Ordering */}
+      <div className="rounded-2xl bg-card p-6 shadow-ambient-sm">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
+            <ShoppingCart className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Ordering</p>
+            <p className="text-xs text-muted-foreground">How and what customers can order</p>
+          </div>
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between rounded-xl bg-surface-low px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-foreground">Online Ordering</p>
+              <p className="text-xs text-muted-foreground">Allow customers to place orders from the digital menu</p>
+            </div>
+            <button onClick={() => set('onlineOrderingEnabled', !form.onlineOrderingEnabled)} className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${form.onlineOrderingEnabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}>
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${form.onlineOrderingEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between rounded-xl bg-surface-low px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-foreground">Show Prep Time</p>
+              <p className="text-xs text-muted-foreground">Display estimated preparation time on each menu item</p>
+            </div>
+            <button onClick={() => set('showPrepTime', !form.showPrepTime)} className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${form.showPrepTime ? 'bg-primary' : 'bg-muted-foreground/30'}`}>
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${form.showPrepTime ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+          <div className="rounded-xl bg-surface-low px-4 py-3">
+            <p className="mb-2 text-sm font-medium text-foreground">Ordering Mode</p>
             <div className="flex gap-2 rounded-xl bg-card p-1">
               {(['dine-in', 'takeaway', 'both'] as const).map(mode => (
-                <button
-                  key={mode}
-                  onClick={() => setForm({ ...form, orderingMode: mode })}
-                  className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                    (form.orderingMode ?? 'both') === mode ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'
-                  }`}
-                >
+                <button key={mode} onClick={() => set('orderingMode', mode)} className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all ${(form.orderingMode ?? 'both') === mode ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'}`}>
                   {mode === 'dine-in' ? '🍽️ Dine In' : mode === 'takeaway' ? '📦 Takeaway' : '🔄 Both'}
                 </button>
               ))}
             </div>
           </div>
-        </div>
-        <div className="sm:col-span-2">
-          <div className="flex items-center justify-between rounded-2xl bg-surface-low p-4">
+          <div className="rounded-xl bg-surface-low px-4 py-3">
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Total Tables</label>
             <div className="flex items-center gap-3">
-              <Clock className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-medium text-foreground">Preparation Time</p>
-                <p className="text-xs text-muted-foreground">Show estimated prep time on menu items</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setForm({ ...form, showPrepTime: !form.showPrepTime })}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
-                form.showPrepTime ? 'bg-primary' : 'bg-muted-foreground/30'
-              }`}
-            >
-              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                form.showPrepTime ? 'translate-x-6' : 'translate-x-1'
-              }`} />
-            </button>
-          </div>
-        </div>
-        <div className="sm:col-span-2">
-          <div className="flex items-center justify-between rounded-2xl bg-surface-low p-4">
-            <div className="flex items-center gap-3">
-              <Printer className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-medium text-foreground">Auto Print Invoice</p>
-                <p className="text-xs text-muted-foreground">Automatically print invoice when order is sent to kitchen</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setForm({ ...form, autoPrintInvoice: !form.autoPrintInvoice })}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
-                form.autoPrintInvoice ? 'bg-primary' : 'bg-muted-foreground/30'
-              }`}
-            >
-              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                form.autoPrintInvoice ? 'translate-x-6' : 'translate-x-1'
-              }`} />
-            </button>
-          </div>
-        </div>
-        {form.autoPrintInvoice && (
-          <div className="sm:col-span-2">
-            <div className="rounded-2xl bg-surface-low p-4">
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Invoice Size</label>
-              <div className="flex gap-2 rounded-xl bg-card p-1">
-                {(['58mm', '80mm'] as const).map(size => (
-                  <button
-                    key={size}
-                    onClick={() => setForm({ ...form, invoiceSize: size })}
-                    className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                      form.invoiceSize === size ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-        <div className="sm:col-span-2">
-          <div className="rounded-2xl bg-surface-low p-4">
-            <div className="mb-3 flex items-center gap-3">
-              <Maximize className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-medium text-foreground">Board Display Controls</p>
-                <p className="text-xs text-muted-foreground">Manage signage speed, layout, and what guests see on /board</p>
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Board Template</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { id: 1, label: 'Template 1', desc: 'Dark Cinematic Grid', preview: '🎬' },
-                    { id: 2, label: 'Template 2', desc: 'Grand Spotlight', preview: '✨' },
-                  ].map(t => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setForm({ ...form, boardTemplate: t.id as 1 | 2 })}
-                      className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
-                        form.boardTemplate === t.id
-                          ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
-                          : 'border-border/40 bg-card hover:border-primary/30'
-                      }`}
-                    >
-                      <span className="text-2xl">{t.preview}</span>
-                      <div>
-                        <p className="text-sm font-bold text-foreground">{t.label}</p>
-                        <p className="text-[11px] text-muted-foreground">{t.desc}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="sm:col-span-2">
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                  Board Rotation Speed — {form.boardCycleSeconds}s
-                </label>
-                <input
-                  type="range"
-                  min={5}
-                  max={120}
-                  step={5}
-                  value={form.boardCycleSeconds}
-                  onChange={e => setForm({ ...form, boardCycleSeconds: parseInt(e.target.value) || 15 })}
-                  className="w-full accent-primary"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Board Columns</label>
-                <div className="flex items-center gap-3">
-                  <Hash className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <input
-                    type="number"
-                    min={2}
-                    max={4}
-                    value={form.boardColumns}
-                    onChange={e => setForm({ ...form, boardColumns: Math.min(4, Math.max(2, parseInt(e.target.value) || 3)) })}
-                    className="w-full rounded-xl bg-card px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Board Currency Symbol</label>
-                <input
-                  value={form.currency}
-                  onChange={e => setForm({ ...form, currency: e.target.value })}
-                  className="w-full rounded-xl bg-card px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Board Background Color</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={form.boardBackgroundColor}
-                    onChange={e => setForm({ ...form, boardBackgroundColor: e.target.value })}
-                    className="h-10 w-10 rounded-xl border-0 bg-transparent cursor-pointer"
-                  />
-                  <input
-                    value={form.boardBackgroundColor}
-                    onChange={e => setForm({ ...form, boardBackgroundColor: e.target.value })}
-                    className="w-full rounded-xl bg-card px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-              </div>
-              <label className="flex items-center justify-between rounded-xl bg-card px-4 py-3 text-sm">
-                <span>Show item photos</span>
-                <input
-                  type="checkbox"
-                  checked={form.boardShowPhotos}
-                  onChange={e => setForm({ ...form, boardShowPhotos: e.target.checked })}
-                  className="h-4 w-4 rounded"
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-xl bg-card px-4 py-3 text-sm">
-                <span>Show price</span>
-                <input
-                  type="checkbox"
-                  checked={form.boardShowPrice}
-                  onChange={e => setForm({ ...form, boardShowPrice: e.target.checked })}
-                  className="h-4 w-4 rounded"
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-xl bg-card px-4 py-3 text-sm">
-                <span>Show description</span>
-                <input
-                  type="checkbox"
-                  checked={form.boardShowDescription}
-                  onChange={e => setForm({ ...form, boardShowDescription: e.target.checked })}
-                  className="h-4 w-4 rounded"
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-xl bg-card px-4 py-3 text-sm">
-                <span>Show prep time on board</span>
-                <input
-                  type="checkbox"
-                  checked={form.boardShowPrepTime}
-                  onChange={e => setForm({ ...form, boardShowPrepTime: e.target.checked })}
-                  className="h-4 w-4 rounded"
-                />
-              </label>
+              <Hash className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <input type="number" min={1} max={200} value={form.totalTables ?? 20} onChange={e => set('totalTables', parseInt(e.target.value) || 1)} className="w-full rounded-xl bg-card px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary" />
             </div>
           </div>
         </div>
-        <div className="sm:col-span-2">
-          <div className="rounded-2xl border border-border/40 bg-surface-low p-6">
-            <div className="mb-6 flex items-center gap-3">
-              <ReceiptText className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-bold text-foreground uppercase tracking-wider">Tax, Service & Fees</p>
-                <p className="text-xs text-muted-foreground">Manage taxes, service charges, and additional order fees</p>
-              </div>
-            </div>
+      </div>
 
-            <div className="space-y-6">
-              {/* Tax Section */}
-              <div className="rounded-xl bg-card p-4 border border-border/20 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Percent className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold">Taxes</span>
-                  </div>
-                  <button
-                    onClick={() => setForm({ ...form, taxEnabled: !form.taxEnabled })}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
-                      form.taxEnabled ? 'bg-primary' : 'bg-muted-foreground/30'
-                    }`}
-                  >
-                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                      form.taxEnabled ? 'translate-x-6' : 'translate-x-1'
-                    }`} />
-                  </button>
-                </div>
-                {form.taxEnabled && (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="flex rounded-lg bg-surface-low p-1">
-                      {(['percentage', 'fixed'] as const).map(type => (
-                        <button
-                          key={type}
-                          onClick={() => setForm({ ...form, taxType: type })}
-                          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                            form.taxType === type ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
-                          }`}
-                        >
-                          {type === 'percentage' ? '%' : 'Fixed'}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={form.taxRate}
-                        onChange={e => setForm({ ...form, taxRate: parseFloat(e.target.value) || 0 })}
-                        className="w-full rounded-lg bg-surface-low px-4 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary"
-                        placeholder="Rate"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground uppercase">
-                        {form.taxType === 'percentage' ? '%' : form.currency}
-                      </span>
-                    </div>
-                  </div>
-                )}
-                {form.taxEnabled && (
-                  <div className="mt-3 flex items-center gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={form.taxApplyDineIn} 
-                        onChange={e => setForm({ ...form, taxApplyDineIn: e.target.checked })}
-                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                      />
-                      <span className="text-[10px] font-medium text-muted-foreground uppercase">Dine In</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={form.taxApplyTakeaway} 
-                        onChange={e => setForm({ ...form, taxApplyTakeaway: e.target.checked })}
-                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                      />
-                      <span className="text-[10px] font-medium text-muted-foreground uppercase">Takeaway</span>
-                    </label>
-                  </div>
-                )}
-              </div>
-
-              {/* Service Charge Section */}
-              <div className="rounded-xl bg-card p-4 border border-border/20 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Coins className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold">Service Charge</span>
-                  </div>
-                  <button
-                    onClick={() => setForm({ ...form, serviceChargeEnabled: !form.serviceChargeEnabled })}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
-                      form.serviceChargeEnabled ? 'bg-primary' : 'bg-muted-foreground/30'
-                    }`}
-                  >
-                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                      form.serviceChargeEnabled ? 'translate-x-6' : 'translate-x-1'
-                    }`} />
-                  </button>
-                </div>
-                {form.serviceChargeEnabled && (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="flex rounded-lg bg-surface-low p-1">
-                      {(['percentage', 'fixed'] as const).map(type => (
-                        <button
-                          key={type}
-                          onClick={() => setForm({ ...form, serviceChargeType: type })}
-                          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                            form.serviceChargeType === type ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
-                          }`}
-                        >
-                          {type === 'percentage' ? '%' : 'Fixed'}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={form.serviceChargeRate}
-                        onChange={e => setForm({ ...form, serviceChargeRate: parseFloat(e.target.value) || 0 })}
-                        className="w-full rounded-lg bg-surface-low px-4 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary"
-                        placeholder="Rate"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground uppercase">
-                        {form.serviceChargeType === 'percentage' ? '%' : form.currency}
-                      </span>
-                    </div>
-                  </div>
-                )}
-                {form.serviceChargeEnabled && (
-                  <div className="mt-3 flex items-center gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={form.serviceChargeApplyDineIn} 
-                        onChange={e => setForm({ ...form, serviceChargeApplyDineIn: e.target.checked })}
-                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                      />
-                      <span className="text-[10px] font-medium text-muted-foreground uppercase">Dine In</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={form.serviceChargeApplyTakeaway} 
-                        onChange={e => setForm({ ...form, serviceChargeApplyTakeaway: e.target.checked })}
-                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                      />
-                      <span className="text-[10px] font-medium text-muted-foreground uppercase">Takeaway</span>
-                    </label>
-                  </div>
-                )}
-              </div>
-
-              {/* Additional Fees Section */}
-              <div className="rounded-xl bg-card p-4 border border-border/20 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Plus className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold">Additional Fee</span>
-                  </div>
-                  <button
-                    onClick={() => setForm({ ...form, additionalFeeEnabled: !form.additionalFeeEnabled })}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
-                      form.additionalFeeEnabled ? 'bg-primary' : 'bg-muted-foreground/30'
-                    }`}
-                  >
-                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                      form.additionalFeeEnabled ? 'translate-x-6' : 'translate-x-1'
-                    }`} />
-                  </button>
-                </div>
-                {form.additionalFeeEnabled && (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="sm:col-span-2">
-                      <label className="mb-1 block text-[10px] uppercase font-bold text-muted-foreground">Fee Name</label>
-                      <input
-                        value={form.additionalFeeName}
-                        onChange={e => setForm({ ...form, additionalFeeName: e.target.value })}
-                        className="w-full rounded-lg bg-surface-low px-4 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary"
-                        placeholder="e.g. Eco Fee"
-                      />
-                    </div>
-                    <div className="flex rounded-lg bg-surface-low p-1">
-                      {(['percentage', 'fixed'] as const).map(type => (
-                        <button
-                          key={type}
-                          onClick={() => setForm({ ...form, additionalFeeType: type })}
-                          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                            form.additionalFeeType === type ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
-                          }`}
-                        >
-                          {type === 'percentage' ? '%' : 'Fixed'}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={form.additionalFeeAmount}
-                        onChange={e => setForm({ ...form, additionalFeeAmount: parseFloat(e.target.value) || 0 })}
-                        className="w-full rounded-lg bg-surface-low px-4 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary"
-                        placeholder="Amount"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground uppercase">
-                        {form.additionalFeeType === 'percentage' ? '%' : form.currency}
-                      </span>
-                    </div>
-                  </div>
-                )}
-                {form.additionalFeeEnabled && (
-                  <div className="mt-3 flex items-center gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={form.additionalFeeApplyDineIn} 
-                        onChange={e => setForm({ ...form, additionalFeeApplyDineIn: e.target.checked })}
-                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                      />
-                      <span className="text-[10px] font-medium text-muted-foreground uppercase">Dine In</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={form.additionalFeeApplyTakeaway} 
-                        onChange={e => setForm({ ...form, additionalFeeApplyTakeaway: e.target.checked })}
-                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                      />
-                      <span className="text-[10px] font-medium text-muted-foreground uppercase">Takeaway</span>
-                    </label>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-end sm:col-span-2">
-          <Button onClick={() => {
-            updateBrand(form);
-            toast.success("Branding settings saved successfully");
-          }} className="w-full">
-            <Save className="h-4 w-4" />
-            Save Branding
-          </Button>
-          <Button asChild variant="outline" className="ml-4 w-full">
-            <a
-              href={`/board?template=${form.boardTemplate}&cycle=${form.boardCycleSeconds}&columns=${form.boardColumns}&photos=${form.boardShowPhotos}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              View Board
-            </a>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      <Button onClick={() => { updateBrand(form); toast.success("Branding saved"); }} className="w-full">
+        <Save className="h-4 w-4" /> Save Branding
+      </Button>
+    </div>
   );
 }
 
