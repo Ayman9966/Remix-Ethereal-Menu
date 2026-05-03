@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMenu } from '@/hooks/use-menu-context';
 import { fetchCategories, fetchMenuItems, fetchBrandSettings } from '@/lib/supabase-store';
-import { Search, Clock, UtensilsCrossed, Plus, Minus, ShoppingCart, X, Send, Check, Package, Bell, ChevronDown, ChevronUp, History, CheckCircle2, ChevronRight, Receipt, ChefHat, AlertCircle } from 'lucide-react';
+import { Search, Clock, UtensilsCrossed, Plus, Minus, ShoppingCart, X, Send, Check, Package, Bell, ChevronDown, ChevronUp, History, CheckCircle2, ChevronRight, ClipboardList, ChefHat, AlertCircle } from 'lucide-react';
 import { 
   Dialog,
   DialogContent,
@@ -586,7 +586,7 @@ function CustomerMenuPage() {
               }`}
               aria-label="My orders"
             >
-              <Receipt className="h-5 w-5 shrink-0" />
+              <ClipboardList className="h-5 w-5 shrink-0" />
               <AnimatePresence mode="popLayout" initial={false}>
                 {labelsExpanded && (
                   <motion.span 
