@@ -5,7 +5,7 @@ import { ApprovalDialog } from '@/components/ApprovalDialog';
 import { useMenu } from '@/hooks/use-menu-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, UtensilsCrossed, Tag, Palette, Save, X, ImageIcon, ShoppingCart, Clock, Maximize, Hash, Package, Bell, Check, QrCode, Download, Printer, ExternalLink, Search, GripVertical, Settings, RotateCw, ReceiptText, Percent, Coins } from 'lucide-react';
+import { Plus, Pencil, Trash2, UtensilsCrossed, Tag, Palette, Save, X, ImageIcon, ShoppingCart, BarChart2, Clock, Maximize, Hash, Package, Bell, Check, QrCode, Download, Printer, ExternalLink, Search, GripVertical, Settings, RotateCw, ReceiptText, Percent, Coins } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
@@ -75,7 +75,7 @@ function AdminPage() {
   const awaiting_orders_count = orders.filter(o => o.status === 'awaiting_approval').length;
 
   const tabs: { id: Tab; label: string; icon: any }[] = [
-    { id: 'analytics', label: 'Analytics', icon: ShoppingCart },
+    { id: 'analytics', label: 'Analytics', icon: BarChart2 },
     { id: 'items', label: 'Menu Items', icon: UtensilsCrossed },
     { id: 'categories', label: 'Categories', icon: Tag },
     { id: 'branding', label: 'Branding', icon: Palette },
@@ -306,15 +306,21 @@ function AnalyticsTab() {
                     </tr>
                  </thead>
                  <tbody className="divide-y">
-                    {orders.slice(0, 5).map(o => (
-                      <tr key={o.id}>
-                        <td className="py-2.5 font-medium">#{o.orderNumber}</td>
-                        <td className="py-2.5 text-muted-foreground">
-                          {o.items.map(i => `${i.quantity}x ${i.menuItem.name}`).join(', ').slice(0, 30)}...
-                        </td>
-                        <td className="py-2.5 text-right font-bold">{brand.currency}{o.total.toFixed(2)}</td>
-                      </tr>
-                    ))}
+                    {[...orders]
+                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      .slice(0, 5)
+                      .map(o => {
+                        const itemStr = o.items.map(i => `${i.quantity}x ${i.menuItem.name}`).join(', ');
+                        return (
+                          <tr key={o.id}>
+                            <td className="py-2.5 font-medium">#{o.orderNumber}</td>
+                            <td className="py-2.5 text-muted-foreground">
+                              {itemStr.length > 30 ? `${itemStr.slice(0, 30)}…` : itemStr}
+                            </td>
+                            <td className="py-2.5 text-right font-bold">{brand.currency}{o.total.toFixed(2)}</td>
+                          </tr>
+                        );
+                      })}
                  </tbody>
                </table>
             </div>

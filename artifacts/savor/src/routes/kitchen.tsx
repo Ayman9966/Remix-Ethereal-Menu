@@ -30,7 +30,7 @@ function KitchenPage() {
   useEffect(() => {
     const timer = setInterval(() => {
       setTick(t => t + 1);
-    }, 60000);
+    }, 15000);
     return () => clearInterval(timer);
   }, []);
 

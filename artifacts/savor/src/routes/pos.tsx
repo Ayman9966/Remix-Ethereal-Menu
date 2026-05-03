@@ -62,10 +62,15 @@ function POSPage() {
   const [showSummary, setShowSummary] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
+  // Tracks whether the current printingOrder was set by auto-print (sendOrder).
+  // Manual prints (handlePrint) call window.print() directly via flushSync and must
+  // not trigger a second print from this effect.
+  const autoPrintPending = useRef(false);
 
-  // Auto-print: 200 ms gives React time to flush the invoice DOM before print dialog
+  // Auto-print: only fires for orders queued by sendOrder (autoPrintPending = true)
   useEffect(() => {
-    if (!printingOrder) return;
+    if (!printingOrder || !autoPrintPending.current) return;
+    autoPrintPending.current = false;
     const timer = setTimeout(() => {
       window.print();
       setPrintingOrder(null);
@@ -238,6 +243,7 @@ function POSPage() {
         ...orderData,
         orderNumber: optimisticOrderNumber,
       };
+      autoPrintPending.current = true;
       setPrintingOrder(printableOrder);
     }
 
@@ -268,8 +274,14 @@ function POSPage() {
         {posViewMode === 'history' ? (
           <div className="flex-1 overflow-auto p-6">
              <h2 className="font-display text-2xl font-bold mb-6">Order History</h2>
+             {orders.length === 0 ? (
+               <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/40 text-muted-foreground">
+                 <ShoppingCart className="h-10 w-10 opacity-20" />
+                 <p className="text-sm font-medium">No orders yet</p>
+               </div>
+             ) : (
              <div className="grid gap-4">
-               {orders.map(order => (
+               {[...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(order => (
                  <Card key={order.id}>
                    <CardContent className="p-4 flex justify-between items-center">
                       <div>
@@ -284,6 +296,7 @@ function POSPage() {
                  </Card>
                ))}
              </div>
+             )}
           </div>
         ) : (
           <>

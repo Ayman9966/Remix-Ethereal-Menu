@@ -335,18 +335,20 @@ function CustomerMenuPage() {
   const removeFromCart = (id: string) => setCart(prev => prev.filter(c => c.menuItem.id !== id));
 
   const subtotal = cart.reduce((sum, c) => sum + c.menuItem.price * c.quantity, 0);
-  
-  const shouldApplyTax = brand.taxEnabled && (orderType === 'dine-in' ? brand.taxApplyDineIn : brand.taxApplyTakeaway);
+  const hasItems = cart.length > 0;
+
+  // Only apply fees when cart has items — prevents fixed-rate fees inflating an empty-cart total
+  const shouldApplyTax = hasItems && brand.taxEnabled && (orderType === 'dine-in' ? brand.taxApplyDineIn : brand.taxApplyTakeaway);
   const tax = shouldApplyTax 
     ? (brand.taxType === 'percentage' ? (subtotal * (brand.taxRate / 100)) : brand.taxRate)
     : 0;
     
-  const shouldApplyServiceCharge = brand.serviceChargeEnabled && (orderType === 'dine-in' ? brand.serviceChargeApplyDineIn : brand.serviceChargeApplyTakeaway);
+  const shouldApplyServiceCharge = hasItems && brand.serviceChargeEnabled && (orderType === 'dine-in' ? brand.serviceChargeApplyDineIn : brand.serviceChargeApplyTakeaway);
   const serviceCharge = shouldApplyServiceCharge
     ? (brand.serviceChargeType === 'percentage' ? (subtotal * (brand.serviceChargeRate / 100)) : brand.serviceChargeRate)
     : 0;
     
-  const shouldApplyAdditionalFee = brand.additionalFeeEnabled && (orderType === 'dine-in' ? brand.additionalFeeApplyDineIn : brand.additionalFeeApplyTakeaway);
+  const shouldApplyAdditionalFee = hasItems && brand.additionalFeeEnabled && (orderType === 'dine-in' ? brand.additionalFeeApplyDineIn : brand.additionalFeeApplyTakeaway);
   const additionalFee = shouldApplyAdditionalFee
     ? (brand.additionalFeeType === 'percentage' ? (subtotal * (brand.additionalFeeAmount / 100)) : brand.additionalFeeAmount)
     : 0;
