@@ -568,37 +568,41 @@ function CustomerMenuPage() {
 
       {/* Floating My Orders Button (Takeaway tracking) */}
       {myActiveOrders.length > 0 && !showCart && !showMyOrders && (
-        <button
-          onClick={() => setShowMyOrders(true)}
-          onMouseEnter={() => setLabelsExpanded(true)}
-          className={`fixed z-40 relative flex items-center gap-2.5 rounded-2xl bg-success px-5 py-3.5 text-success-foreground shadow-ambient transition-all hover:shadow-lg active:scale-95 ${
-            ordering && cartCount > 0 ? 'bottom-40 right-6' : 'bottom-24 right-6'
-          } ${!labelsExpanded ? 'w-[52px] px-0 justify-center' : ''}`}
-          aria-label="My orders"
-        >
-          <motion.span
-            className="absolute -top-2 -right-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-black text-background"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-          >
-            {myActiveOrders.length}
-          </motion.span>
-          <Receipt className="h-5 w-5 shrink-0" />
-          <AnimatePresence mode="popLayout" initial={false}>
-            {labelsExpanded && (
-              <motion.span 
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: 'auto' }}
-                exit={{ opacity: 0, width: 0 }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
-                className="overflow-hidden whitespace-nowrap text-sm font-bold"
-              >
-                My Orders
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </button>
+        <div className={`fixed z-40 ${ordering && cartCount > 0 ? 'bottom-40 right-6' : 'bottom-24 right-6'}`}>
+          <div className="relative">
+            <motion.span
+              className="absolute -top-2 -right-2 z-10 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-black text-background"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+            >
+              {myActiveOrders.length}
+            </motion.span>
+            <button
+              onClick={() => setShowMyOrders(true)}
+              onMouseEnter={() => setLabelsExpanded(true)}
+              className={`flex items-center gap-2.5 rounded-2xl bg-success px-5 py-3.5 text-success-foreground shadow-ambient transition-all hover:shadow-lg active:scale-95 ${
+                !labelsExpanded ? 'w-[52px] px-0 justify-center' : ''
+              }`}
+              aria-label="My orders"
+            >
+              <Receipt className="h-5 w-5 shrink-0" />
+              <AnimatePresence mode="popLayout" initial={false}>
+                {labelsExpanded && (
+                  <motion.span 
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    className="overflow-hidden whitespace-nowrap text-sm font-bold"
+                  >
+                    My Orders
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </button>
+          </div>
+        </div>
       )}
 
       {/* My Orders Modal */}
