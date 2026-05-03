@@ -6,8 +6,8 @@ export default function DigitalMenu() {
         style={{ top: 0, right: 0, width: '50vw', height: '100vh', background: '#162220' }}
       />
 
-      <div className="absolute inset-0 flex" style={{ paddingLeft: '8vw', paddingRight: '8vw', paddingTop: '8vh', paddingBottom: '8vh' }}>
-        <div style={{ width: '45vw', display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingRight: '4vw' }}>
+      <div className="absolute inset-0 flex" style={{ paddingLeft: '8vw', paddingRight: '6vw', paddingTop: '8vh', paddingBottom: '8vh' }}>
+        <div style={{ width: '44vw', display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingRight: '4vw' }}>
           <span
             className="font-body font-medium uppercase tracking-widest"
             style={{ fontSize: '1.2vw', color: '#5d918f', letterSpacing: '0.16em', marginBottom: '2vh' }}
@@ -51,45 +51,42 @@ export default function DigitalMenu() {
           </div>
         </div>
 
-        <div style={{ width: '38vw', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: '22vw', background: '#0c1412', borderRadius: '2vw', overflow: 'hidden', border: '1px solid rgba(93,145,143,0.2)', boxShadow: '0 2vw 4vw rgba(0,0,0,0.4)' }}>
-            <div style={{ background: '#426564', padding: '2.5vh 2vw', textAlign: 'center' }}>
-              <div className="font-display font-bold" style={{ fontSize: '1.8vw', color: '#eef3f2' }}>Savor</div>
-              <div className="font-body" style={{ fontSize: '1.2vw', color: 'rgba(238,243,242,0.65)' }}>Modern Dining</div>
-            </div>
-            <div style={{ padding: '1.5vh 1.5vw', background: '#111d1b' }}>
-              <div className="font-body" style={{ fontSize: '1.2vw', color: '#7aacaa', background: 'rgba(93,145,143,0.1)', padding: '0.8vh 1vw', borderRadius: '0.8vw', marginBottom: '1.5vh' }}>
-                Search menu...
+        <div style={{ width: '42vw', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ position: 'relative', width: '21vw' }}>
+            <div style={{
+              width: '21vw',
+              aspectRatio: '9/19',
+              background: '#111d1b',
+              borderRadius: '2.5vw',
+              overflow: 'hidden',
+              border: '0.25vw solid rgba(93,145,143,0.35)',
+              boxShadow: '0 2vw 5vw rgba(0,0,0,0.55), 0 0 0 0.1vw rgba(93,145,143,0.1)',
+              position: 'relative',
+            }}>
+              <div style={{
+                position: 'absolute',
+                top: 0, left: 0, right: 0,
+                height: '2.8vh',
+                background: '#111d1b',
+                zIndex: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <div style={{ width: '5vw', height: '0.6vh', background: 'rgba(93,145,143,0.3)', borderRadius: '1vw' }} />
               </div>
-              <div style={{ display: 'flex', gap: '0.6vw', marginBottom: '1.5vh' }}>
-                <div style={{ background: '#426564', borderRadius: '2vw', padding: '0.4vh 1vw' }}>
-                  <span className="font-body font-medium" style={{ fontSize: '1.1vw', color: '#eef3f2' }}>All</span>
-                </div>
-                <div style={{ background: 'rgba(93,145,143,0.12)', borderRadius: '2vw', padding: '0.4vh 1vw' }}>
-                  <span className="font-body" style={{ fontSize: '1.1vw', color: '#7aacaa' }}>Starters</span>
-                </div>
-                <div style={{ background: 'rgba(93,145,143,0.12)', borderRadius: '2vw', padding: '0.4vh 1vw' }}>
-                  <span className="font-body" style={{ fontSize: '1.1vw', color: '#7aacaa' }}>Mains</span>
-                </div>
-              </div>
-              <div style={{ background: 'rgba(93,145,143,0.07)', borderRadius: '1vw', padding: '1.2vh 1vw', marginBottom: '0.8vh', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div className="font-display font-semibold" style={{ fontSize: '1.3vw', color: '#eef3f2' }}>Grilled Octopus</div>
-                  <div className="font-body" style={{ fontSize: '1.1vw', color: '#7aacaa' }}>18.00</div>
-                </div>
-                <div style={{ width: '2.2vw', height: '2.2vw', background: '#426564', borderRadius: '0.6vw', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span className="font-display font-bold" style={{ fontSize: '1.5vw', color: '#eef3f2', lineHeight: 1 }}>+</span>
-                </div>
-              </div>
-              <div style={{ background: 'rgba(93,145,143,0.07)', borderRadius: '1vw', padding: '1.2vh 1vw', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div className="font-display font-semibold" style={{ fontSize: '1.3vw', color: '#eef3f2' }}>Crispy Calamari</div>
-                  <div className="font-body" style={{ fontSize: '1.1vw', color: '#7aacaa' }}>14.00</div>
-                </div>
-                <div style={{ width: '2.2vw', height: '2.2vw', background: '#426564', borderRadius: '0.6vw', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span className="font-display font-bold" style={{ fontSize: '1.5vw', color: '#eef3f2', lineHeight: 1 }}>+</span>
-                </div>
-              </div>
+              <img
+                src="/ss-menu.jpg"
+                alt="Digital Menu"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', display: 'block' }}
+              />
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '2.5vw',
+                boxShadow: 'inset 0 0 0 0.25vw rgba(93,145,143,0.2)',
+                pointerEvents: 'none',
+              }} />
             </div>
           </div>
         </div>

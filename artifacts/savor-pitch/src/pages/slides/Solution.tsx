@@ -1,4 +1,13 @@
 export default function Solution() {
+  const modules = [
+    { label: 'Digital Menu', desc: 'QR-based, no app. Guests scan and order from any device.', img: '/ss-menu.jpg' },
+    { label: 'Kitchen Display', desc: 'Live ticket queue with urgency states. No paper, no missed orders.', img: '/ss-kitchen.jpg' },
+    { label: 'Point of Sale', desc: 'Tableside or counter orders with auto receipt printing.', img: '/ss-pos.jpg' },
+    { label: 'Board Display', desc: 'Live signage showing order status — visible to waiting guests.', img: '/ss-board.jpg' },
+    { label: 'Analytics', desc: 'Revenue trends, top items, peak hours — updated in real time.', img: '/ss-admin.jpg' },
+    { label: 'Admin Panel', desc: 'Full menu management, branding, table config, and staff access.', img: '/ss-admin.jpg' },
+  ];
+
   return (
     <div className="relative w-screen h-screen overflow-hidden" style={{ background: '#0c1412' }}>
       <div
@@ -15,65 +24,31 @@ export default function Solution() {
         </span>
         <h2
           className="font-display font-bold tracking-tight"
-          style={{ fontSize: '4vw', color: '#eef3f2', lineHeight: 1.1, marginBottom: '5vh' }}
+          style={{ fontSize: '4vw', color: '#eef3f2', lineHeight: 1.1, marginBottom: '4vh' }}
         >
           Six views. One live system.
         </h2>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2vw', flex: 1 }}>
-          <div style={{ background: '#162220', borderRadius: '1.2vw', padding: '3vh 2.2vw', border: '1px solid rgba(93,145,143,0.15)' }}>
-            <div className="font-display font-bold" style={{ fontSize: '2vw', color: '#eef3f2', marginBottom: '1.2vh' }}>
-              Digital Menu
+          {modules.map((m) => (
+            <div key={m.label} style={{ background: '#162220', borderRadius: '1.2vw', border: '1px solid rgba(93,145,143,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ height: '12vh', overflow: 'hidden', flexShrink: 0 }}>
+                <img
+                  src={m.img}
+                  alt={m.label}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', display: 'block' }}
+                />
+              </div>
+              <div style={{ padding: '1.8vh 1.8vw', flex: 1 }}>
+                <div className="font-display font-bold" style={{ fontSize: '1.7vw', color: '#eef3f2', marginBottom: '0.8vh' }}>
+                  {m.label}
+                </div>
+                <div className="font-body" style={{ fontSize: '1.3vw', color: '#7aacaa', lineHeight: 1.5 }}>
+                  {m.desc}
+                </div>
+              </div>
             </div>
-            <div className="font-body" style={{ fontSize: '1.5vw', color: '#7aacaa', lineHeight: 1.5 }}>
-              QR-based, no app download. Guests scan and order from any device.
-            </div>
-          </div>
-
-          <div style={{ background: '#162220', borderRadius: '1.2vw', padding: '3vh 2.2vw', border: '1px solid rgba(93,145,143,0.15)' }}>
-            <div className="font-display font-bold" style={{ fontSize: '2vw', color: '#eef3f2', marginBottom: '1.2vh' }}>
-              Kitchen Display
-            </div>
-            <div className="font-body" style={{ fontSize: '1.5vw', color: '#7aacaa', lineHeight: 1.5 }}>
-              Live ticket queue with urgency states. No paper. No missed orders.
-            </div>
-          </div>
-
-          <div style={{ background: '#162220', borderRadius: '1.2vw', padding: '3vh 2.2vw', border: '1px solid rgba(93,145,143,0.15)' }}>
-            <div className="font-display font-bold" style={{ fontSize: '2vw', color: '#eef3f2', marginBottom: '1.2vh' }}>
-              Point of Sale
-            </div>
-            <div className="font-body" style={{ fontSize: '1.5vw', color: '#7aacaa', lineHeight: 1.5 }}>
-              Tableside or counter orders with auto receipt printing.
-            </div>
-          </div>
-
-          <div style={{ background: '#162220', borderRadius: '1.2vw', padding: '3vh 2.2vw', border: '1px solid rgba(93,145,143,0.15)' }}>
-            <div className="font-display font-bold" style={{ fontSize: '2vw', color: '#eef3f2', marginBottom: '1.2vh' }}>
-              Board Display
-            </div>
-            <div className="font-body" style={{ fontSize: '1.5vw', color: '#7aacaa', lineHeight: 1.5 }}>
-              Live signage showing order status — visible to waiting guests.
-            </div>
-          </div>
-
-          <div style={{ background: '#162220', borderRadius: '1.2vw', padding: '3vh 2.2vw', border: '1px solid rgba(93,145,143,0.15)' }}>
-            <div className="font-display font-bold" style={{ fontSize: '2vw', color: '#eef3f2', marginBottom: '1.2vh' }}>
-              Analytics
-            </div>
-            <div className="font-body" style={{ fontSize: '1.5vw', color: '#7aacaa', lineHeight: 1.5 }}>
-              Revenue trends, top items, peak hours — updated in real time.
-            </div>
-          </div>
-
-          <div style={{ background: '#162220', borderRadius: '1.2vw', padding: '3vh 2.2vw', border: '1px solid rgba(93,145,143,0.15)' }}>
-            <div className="font-display font-bold" style={{ fontSize: '2vw', color: '#eef3f2', marginBottom: '1.2vh' }}>
-              Admin Panel
-            </div>
-            <div className="font-body" style={{ fontSize: '1.5vw', color: '#7aacaa', lineHeight: 1.5 }}>
-              Full menu management, branding, table config, and staff access.
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </div>
