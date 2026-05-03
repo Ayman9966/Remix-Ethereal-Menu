@@ -18,8 +18,8 @@
   --slide-surface: #162220;
   --slide-text: #eef3f2;
   --slide-muted: #7aacaa;
-  --font-display-family: "Outfit", system-ui, sans-serif;
-  --font-body-family: "DM Sans", system-ui, sans-serif;
+  --font-display-family: "Public Sans", system-ui, sans-serif;
+  --font-body-family: "Inter", system-ui, sans-serif;
   color-scheme: dark;
 }
 
