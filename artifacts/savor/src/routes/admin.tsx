@@ -5,8 +5,8 @@ import { ApprovalDialog } from '@/components/ApprovalDialog';
 import { useMenu } from '@/hooks/use-menu-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, UtensilsCrossed, Tag, Palette, Save, X, ImageIcon, ShoppingCart, BarChart2, Clock, Maximize, Hash, Package, Bell, Check, QrCode, Download, Printer, ExternalLink, Search, GripVertical, Settings, RotateCw, ReceiptText, Percent, Coins } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import { Plus, Pencil, Trash2, UtensilsCrossed, Tag, Palette, Save, X, ImageIcon, ShoppingCart, BarChart2, Clock, Maximize, Hash, Package, Bell, Check, QrCode, Download, Printer, ExternalLink, Search, GripVertical, Settings, RotateCw, ReceiptText, Percent, Coins, Copy } from 'lucide-react';
+import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import type { MenuItem, Category } from '@/lib/menu-data';
@@ -1411,65 +1411,239 @@ function QrCodesTab() {
   const { brand } = useMenu();
   const totalTables = brand.totalTables ?? 20;
   const [origin, setOrigin] = useState('');
+  const [downloading, setDownloading] = useState<number | null>(null);
+  const [downloadingAll, setDownloadingAll] = useState(false);
+  const [search, setSearch] = useState('');
+  const [cardSize, setCardSize] = useState<'sm' | 'md' | 'lg'>('md');
 
   useEffect(() => {
     if (typeof window !== 'undefined') setOrigin(window.location.origin);
   }, []);
 
   const tables = Array.from({ length: totalTables }, (_, i) => i + 1);
+  const filtered = search.trim() ? tables.filter(t => String(t).includes(search.trim())) : tables;
 
-  const downloadQR = (table: number) => {
-    const svg = document.getElementById(`qr-table-${table}`) as unknown as SVGSVGElement | null;
-    if (!svg) return;
-    const xml = new XMLSerializer().serializeToString(svg);
-    const blob = new Blob([xml], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${brand.restaurantName.replace(/\s+/g, '-').toLowerCase()}-table-${table}.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(`QR Code for Table ${table} downloaded`);
+  const getTableUrl = (t: number) => `${origin}/t/${t}`;
+  const takeawayUrl = `${origin}/menu`;
+
+  const copyLink = async (url: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success(`${label} link copied`);
+    } catch {
+      toast.error('Copy failed');
+    }
   };
 
-  const printAll = () => window.print();
+  const downloadPNG = (id: string, filename: string, tableNum?: number) => {
+    const canvas = document.getElementById(id) as HTMLCanvasElement | null;
+    if (!canvas) { toast.error('QR not ready'); return; }
+    if (tableNum !== undefined) setDownloading(tableNum);
+    setTimeout(() => {
+      const dataUrl = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = filename;
+      a.click();
+      if (tableNum !== undefined) setDownloading(null);
+    }, 80);
+  };
 
-  if (!origin) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
-  }
+  const downloadAllPNGs = async () => {
+    setDownloadingAll(true);
+    const slug = brand.restaurantName.replace(/\s+/g, '-').toLowerCase();
+    for (const t of tables) {
+      const canvas = document.getElementById(`qr-canvas-${t}`) as HTMLCanvasElement | null;
+      if (canvas) {
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = `${slug}-table-${t}.png`;
+        a.click();
+        await new Promise(r => setTimeout(r, 80));
+      }
+    }
+    setDownloadingAll(false);
+    toast.success(`Downloaded ${tables.length} QR codes`);
+  };
+
+  const qrSize = cardSize === 'sm' ? 110 : cardSize === 'lg' ? 180 : 148;
+  const gridCols =
+    cardSize === 'sm' ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5' :
+    cardSize === 'lg' ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3' :
+    'grid-cols-2 sm:grid-cols-3 md:grid-cols-4';
+
+  if (!origin) return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
+
+  const slug = brand.restaurantName.replace(/\s+/g, '-').toLowerCase();
 
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between print:hidden">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            Print and place these QR codes on each table. Customers scan to open the menu with their table number pre-filled.
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">URL pattern: <code className="rounded bg-surface-low px-1.5 py-0.5">{origin}/t1</code>, <code className="rounded bg-surface-low px-1.5 py-0.5">{origin}/t2</code> …</p>
+    <div className="space-y-6">
+      {/* Header card */}
+      <div className="rounded-2xl bg-card p-5 shadow-ambient-sm print:hidden">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <h3 className="font-semibold text-foreground">Table QR Codes</h3>
+            <p className="text-sm text-muted-foreground">
+              Print and place on each table. Customers scan to open the menu with their table pre-filled.
+            </p>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <code className="rounded-lg bg-surface-low px-2 py-1 text-[11px] font-mono text-muted-foreground">
+                {origin}/t/<span className="text-foreground font-semibold">{'{'+'table'+'}'}</span>
+              </code>
+              <span className="text-xs text-muted-foreground">{totalTables} tables configured</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <Button variant="outline" size="sm" onClick={downloadAllPNGs} disabled={downloadingAll}>
+              <Download className="h-3.5 w-3.5" />
+              {downloadingAll ? 'Downloading…' : 'Download All PNGs'}
+            </Button>
+            <Button size="sm" onClick={() => window.print()}>
+              <Printer className="h-3.5 w-3.5" />
+              Print All
+            </Button>
+          </div>
         </div>
-        <Button onClick={printAll}><Printer className="h-4 w-4" />Print All</Button>
+
+        {/* Controls */}
+        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
+          <div className="relative flex-1 min-w-[140px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <input
+              type="number"
+              min={1}
+              max={totalTables}
+              placeholder="Find table…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="h-9 w-full rounded-lg border border-border bg-surface-low pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
+            />
+          </div>
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-surface-low p-1">
+            {(['sm', 'md', 'lg'] as const).map(s => (
+              <button
+                key={s}
+                onClick={() => setCardSize(s)}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                  cardSize === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {s === 'sm' ? 'Small' : s === 'md' ? 'Medium' : 'Large'}
+              </button>
+            ))}
+          </div>
+          {search.trim() && (
+            <span className="text-xs text-muted-foreground">
+              {filtered.length} result{filtered.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 print:grid-cols-3 print:gap-6">
-        {tables.map(t => {
-          const url = `${origin}/t${t}`;
-          return (
-            <div key={t} className="rounded-2xl bg-card p-5 shadow-ambient-sm flex flex-col items-center gap-3 print:break-inside-avoid print:shadow-none">
-              <div className="text-center">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{brand.restaurantName}</p>
-                <p className="font-display text-xl font-bold text-foreground">Table {t}</p>
-              </div>
-              <div className="rounded-xl bg-white p-3">
-                <QRCodeSVG id={`qr-table-${t}`} value={url} size={140} level="M" />
-              </div>
-              <p className="text-[10px] text-muted-foreground break-all text-center">{url}</p>
-              <Button variant="ghost" size="sm" onClick={() => downloadQR(t)} className="print:hidden">
-                <Download className="h-3.5 w-3.5" />
-                Download SVG
+      {/* Takeaway QR */}
+      <div className="print:hidden">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Takeaway / Walk-in</p>
+        <div className="flex items-center gap-5 rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-5">
+          <div className="rounded-xl bg-white p-3 shadow-sm shrink-0">
+            <QRCodeCanvas id="qr-canvas-takeaway" value={takeawayUrl} size={96} level="M" fgColor="#1a1a1a" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-primary">Takeaway Link</p>
+            <p className="mt-0.5 font-display text-lg font-bold text-foreground">Walk-in / Takeaway Orders</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Share this link or print for counter use — customers order without a table number.</p>
+            <p className="mt-1 truncate text-[11px] font-mono text-muted-foreground">{takeawayUrl}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => copyLink(takeawayUrl, 'Takeaway')}>
+                <Copy className="h-3.5 w-3.5" /> Copy Link
               </Button>
+              <Button variant="outline" size="sm" onClick={() => downloadPNG('qr-canvas-takeaway', `${slug}-takeaway.png`)}>
+                <Download className="h-3.5 w-3.5" /> Download PNG
+              </Button>
+              <a href={takeawayUrl} target="_blank" rel="noopener noreferrer">
+                <Button variant="ghost" size="sm">
+                  <ExternalLink className="h-3.5 w-3.5" /> Open
+                </Button>
+              </a>
             </div>
-          );
-        })}
+          </div>
+        </div>
+      </div>
+
+      {/* Table grid */}
+      <div>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground print:hidden">
+          Dine-in Tables
+        </p>
+        {filtered.length === 0 ? (
+          <div className="rounded-2xl bg-card p-10 text-center text-sm text-muted-foreground">
+            No tables match "{search}"
+          </div>
+        ) : (
+          <div className={`grid gap-4 print:grid-cols-3 print:gap-6 ${gridCols}`}>
+            {filtered.map(t => {
+              const url = getTableUrl(t);
+              return (
+                <div
+                  key={t}
+                  className="group rounded-2xl bg-card shadow-ambient-sm flex flex-col items-center overflow-hidden print:break-inside-avoid print:shadow-none print:border print:border-gray-200"
+                >
+                  {/* Card header */}
+                  <div className="w-full px-4 pt-4 pb-2 text-center">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      {brand.restaurantName}
+                    </p>
+                    <p className="font-display text-2xl font-bold text-foreground">Table {t}</p>
+                    <p className="text-[10px] text-muted-foreground">Scan to order</p>
+                  </div>
+
+                  {/* QR */}
+                  <div className="mt-1 mb-2 rounded-xl bg-white p-3 shadow-sm">
+                    <QRCodeCanvas
+                      id={`qr-canvas-${t}`}
+                      value={url}
+                      size={qrSize}
+                      level="M"
+                      fgColor="#1a1a1a"
+                    />
+                  </div>
+
+                  {/* URL */}
+                  <p className="px-3 pb-3 text-[9px] font-mono text-muted-foreground truncate max-w-full text-center">
+                    {url}
+                  </p>
+
+                  {/* Action row */}
+                  <div className="w-full border-t border-border px-2 py-2 flex items-center justify-between print:hidden bg-surface-low/50">
+                    <button
+                      onClick={() => copyLink(url, `Table ${t}`)}
+                      title="Copy link"
+                      className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
+                    >
+                      <Copy className="h-3 w-3" /> Copy
+                    </button>
+                    <button
+                      onClick={() => downloadPNG(`qr-canvas-${t}`, `${slug}-table-${t}.png`, t)}
+                      disabled={downloading === t}
+                      title="Download PNG"
+                      className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-card hover:text-foreground transition-colors disabled:opacity-40"
+                    >
+                      <Download className="h-3 w-3" /> {downloading === t ? '…' : 'PNG'}
+                    </button>
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Open table menu"
+                      className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
+                    >
+                      <ExternalLink className="h-3 w-3" /> Open
+                    </a>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
