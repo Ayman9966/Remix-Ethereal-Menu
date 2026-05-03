@@ -1385,10 +1385,14 @@ function BrandingTab() {
             Save Branding
           </Button>
           <Button asChild variant="outline" className="ml-4 w-full">
-            <Link to="/board" target="_blank">
+            <a
+              href={`/board?template=${form.boardTemplate}&cycle=${form.boardCycleSeconds}&columns=${form.boardColumns}&photos=${form.boardShowPhotos}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <ExternalLink className="mr-2 h-4 w-4" />
               View Board
-            </Link>
+            </a>
           </Button>
         </div>
       </CardContent>
