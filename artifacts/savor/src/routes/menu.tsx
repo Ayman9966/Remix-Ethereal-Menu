@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMenu } from '@/hooks/use-menu-context';
 import { fetchCategories, fetchMenuItems, fetchBrandSettings } from '@/lib/supabase-store';
-import { Search, Clock, UtensilsCrossed, Plus, Minus, ShoppingCart, X, Send, Check, Package, Bell, ChevronDown, ChevronUp, History, CheckCircle2, ChevronRight, ClipboardList, ChefHat, AlertCircle } from 'lucide-react';
+import { Search, Clock, UtensilsCrossed, Plus, Minus, ShoppingCart, X, Send, Check, Package, Bell, ChevronDown, ChevronUp, History, CheckCircle2, ChevronRight, ClipboardList, ChefHat, AlertCircle, ReceiptText } from 'lucide-react';
 import { 
   Dialog,
   DialogContent,
@@ -627,7 +627,7 @@ function CustomerMenuPage() {
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-border/30">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-2xl bg-success/10 flex items-center justify-center">
-                  <Receipt className="h-5 w-5 text-success" />
+                  <ReceiptText className="h-5 w-5 text-success" />
                 </div>
                 <div>
                   <h3 className="font-display text-base font-black text-foreground">My Orders</h3>
