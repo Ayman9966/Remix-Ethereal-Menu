@@ -54,7 +54,7 @@ export default function DigitalMenu() {
         <div style={{ width: '38vw', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ width: '22vw', background: '#0c1412', borderRadius: '2vw', overflow: 'hidden', border: '1px solid rgba(93,145,143,0.2)', boxShadow: '0 2vw 4vw rgba(0,0,0,0.4)' }}>
             <div style={{ background: '#426564', padding: '2.5vh 2vw', textAlign: 'center' }}>
-              <div className="font-display font-bold" style={{ fontSize: '1.8vw', color: '#eef3f2' }}>Savor1</div>
+              <div className="font-display font-bold" style={{ fontSize: '1.8vw', color: '#eef3f2' }}>Savor</div>
               <div className="font-body" style={{ fontSize: '1.2vw', color: 'rgba(238,243,242,0.65)' }}>Modern Dining</div>
             </div>
             <div style={{ padding: '1.5vh 1.5vw', background: '#111d1b' }}>
