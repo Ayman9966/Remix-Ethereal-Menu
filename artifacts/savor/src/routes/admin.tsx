@@ -1024,8 +1024,8 @@ function BrandingTab() {
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Board Template</label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { id: 1, label: 'Template 1', desc: 'Dark Cinematic', preview: '🎬' },
-                    { id: 2, label: 'Template 2', desc: 'Light Editorial', preview: '📋' },
+                    { id: 1, label: 'Template 1', desc: 'Dark Cinematic Grid', preview: '🎬' },
+                    { id: 2, label: 'Template 2', desc: 'Grand Spotlight', preview: '✨' },
                   ].map(t => (
                     <button
                       key={t.id}

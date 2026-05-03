@@ -239,7 +239,7 @@ function BoardTemplate1({
   );
 }
 
-// ─── Template 2: Light Editorial Split ────────────────────────────────────────
+// ─── Template 2: Grand Menu Spotlight ────────────────────────────────────────
 function BoardTemplate2({
   brand, showPhotos, showPrice, showDescription, showPrepTime,
   reduceMotion, now,
@@ -247,218 +247,292 @@ function BoardTemplate2({
   activeCategoryPosition,
 }: BoardProps) {
   const accent = brand.accentColor || '#426564';
-
   const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const dateStr = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
 
+  const featuredItem = activeItems[0] ?? null;
+  const sideItems = activeItems.slice(1);
+
   return (
-    <div className="h-screen flex overflow-hidden bg-[#FAFAF8] text-[#1a1a1a]">
+    <div className="h-screen flex overflow-hidden" style={{ backgroundColor: '#0C0A08' }}>
       <style>{`
-        @keyframes t2SlideIn {
-          from { opacity: 0; transform: translateX(-32px); }
+        @keyframes t2HeroIn {
+          from { opacity: 0; transform: scale(1.06); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes t2PanelIn {
+          from { opacity: 0; transform: translateX(40px); }
           to   { opacity: 1; transform: translateX(0); }
         }
-        @keyframes t2FadeUp {
-          from { opacity: 0; transform: translateY(16px); }
+        @keyframes t2RowIn {
+          from { opacity: 0; transform: translateY(12px); }
           to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes t2Shimmer {
+          0%   { background-position: -400px 0; }
+          100% { background-position: 400px 0; }
         }
         @keyframes t2Ticker {
           from { transform: translateX(0); }
           to   { transform: translateX(-50%); }
         }
-        .t2-item { animation: t2FadeUp 500ms cubic-bezier(0.2,0.8,0.2,1) both; }
+        .t2-row { animation: t2RowIn 480ms cubic-bezier(0.2,0.8,0.2,1) both; }
       `}</style>
 
-      {/* ── LEFT PANEL ── */}
+      {/* ── LEFT: Hero Featured Item ── */}
       <div
-        className="relative flex w-[38%] shrink-0 flex-col overflow-hidden"
-        style={{ backgroundColor: accent }}
+        key={`hero-${activeCategory?.id}`}
+        className="relative w-[52%] shrink-0 overflow-hidden"
+        style={reduceMotion ? undefined : { animation: 't2HeroIn 800ms cubic-bezier(0.2,0.8,0.2,1)' }}
       >
-        {/* Subtle texture overlay */}
-        <div
-          className="pointer-events-none absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: `radial-gradient(circle at 80% 20%, rgba(255,255,255,0.4) 0%, transparent 50%),
-              radial-gradient(circle at 20% 80%, rgba(0,0,0,0.3) 0%, transparent 50%)`,
-          }}
-        />
+        {/* Background — item image or gradient */}
+        {featuredItem?.image && showPhotos ? (
+          <img
+            src={featuredItem.image}
+            alt={featuredItem.name}
+            className="absolute inset-0 h-full w-full object-cover"
+            decoding="async"
+            loading="eager"
+          />
+        ) : (
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `
+                radial-gradient(ellipse 80% 60% at 30% 40%, ${accent}55, transparent 65%),
+                radial-gradient(ellipse 60% 80% at 75% 70%, ${accent}33, transparent 60%),
+                #0C0A08
+              `,
+            }}
+          />
+        )}
 
-        {/* Restaurant header */}
-        <div className="relative z-10 px-8 pt-8 pb-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm shrink-0">
-            <UtensilsCrossed className="h-5 w-5 text-white" />
+        {/* Gradient overlays for text legibility */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/40" />
+
+        {/* Top bar — restaurant + category breadcrumb */}
+        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-8 pt-8 pb-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="h-9 w-9 flex items-center justify-center rounded-xl shrink-0"
+              style={{ backgroundColor: `${accent}33`, border: `1px solid ${accent}55` }}
+            >
+              <UtensilsCrossed className="h-4 w-4" style={{ color: accent }} />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.25em] text-white/90">{brand.restaurantName}</p>
+              {brand.tagline && <p className="text-[9px] text-white/40 tracking-wider">{brand.tagline}</p>}
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-black text-white/90 uppercase tracking-widest leading-none">{brand.restaurantName}</p>
-            {brand.tagline && <p className="text-[10px] text-white/50 tracking-wider mt-0.5">{brand.tagline}</p>}
+          <div
+            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest"
+            style={{ backgroundColor: `${accent}`, color: '#fff' }}
+          >
+            <span>{activeCategory?.icon}</span>
+            <span>{activeCategory?.name ?? 'Menu'}</span>
           </div>
         </div>
 
-        {/* Category hero */}
-        <div
-          key={activeCategory?.id ?? 'empty'}
-          className="relative z-10 flex-1 flex flex-col items-start justify-center px-8"
-          style={reduceMotion ? undefined : { animation: 't2SlideIn 600ms cubic-bezier(0.2,0.8,0.2,1)' }}
-        >
-          {activeCategory ? (
+        {/* Bottom — featured item info */}
+        <div className="absolute bottom-0 left-0 right-0 px-8 pb-8">
+          {featuredItem ? (
             <>
-              <div className="text-[88px] leading-none drop-shadow-xl mb-4 select-none">{activeCategory.icon}</div>
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.25em] mb-2">Now Serving</p>
-              <h1 className="font-display text-5xl font-black text-white leading-none uppercase tracking-tight mb-3">
-                {activeCategory.name}
-              </h1>
-              <p className="text-sm font-bold text-white/50 uppercase tracking-widest">
-                {activeItems.length} {activeItems.length === 1 ? 'Item' : 'Items'}
-              </p>
+              {/* "Featured" label */}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-px flex-1" style={{ background: `linear-gradient(to right, ${accent}, transparent)` }} />
+                <span className="text-[10px] font-black uppercase tracking-[0.3em]" style={{ color: accent }}>
+                  Featured
+                </span>
+              </div>
+
+              <h2 className="font-display text-[52px] font-black leading-none text-white mb-3 drop-shadow-2xl">
+                {featuredItem.name}
+              </h2>
+
+              {showDescription && featuredItem.description && (
+                <p className="text-sm text-white/60 leading-relaxed mb-4 max-w-sm line-clamp-2">
+                  {featuredItem.description}
+                </p>
+              )}
+
+              <div className="flex items-center gap-4">
+                {showPrice && (
+                  <div
+                    className="rounded-2xl px-5 py-2.5 font-display text-2xl font-black tabular-nums"
+                    style={{ backgroundColor: accent, color: '#fff' }}
+                  >
+                    {brand.currency}{featuredItem.price.toFixed(2)}
+                  </div>
+                )}
+                {showPrepTime && featuredItem.preparationTime > 0 && (
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-white/50 uppercase tracking-wider">
+                    <Clock3 className="h-3.5 w-3.5" />
+                    <span>Ready in {featuredItem.preparationTime} min</span>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
-            <div className="text-center">
-              <Sparkles className="h-16 w-16 text-white/30 mb-4" />
-              <p className="text-2xl font-black text-white/60">No items yet</p>
+            <div className="text-center pb-8">
+              <Sparkles className="h-12 w-12 mx-auto mb-3" style={{ color: accent }} />
+              <p className="font-display text-3xl font-black text-white/40">No items yet</p>
             </div>
           )}
         </div>
 
-        {/* Category progress dots */}
+        {/* Category progress strip at left edge */}
         {availableCategories.length > 1 && (
-          <div className="relative z-10 px-8 pb-4 flex items-center gap-1.5">
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 flex flex-col gap-1.5 pl-3">
             {availableCategories.map((cat, i) => (
               <div
                 key={cat.id}
                 className="rounded-full transition-all duration-500"
                 style={{
-                  width: i === activeCategoryPosition - 1 ? 20 : 6,
-                  height: 6,
-                  backgroundColor: i === activeCategoryPosition - 1 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.25)',
+                  width: 4,
+                  height: i === activeCategoryPosition - 1 ? 28 : 8,
+                  backgroundColor: i === activeCategoryPosition - 1 ? accent : 'rgba(255,255,255,0.2)',
                 }}
               />
             ))}
-            <span className="ml-auto text-[10px] font-bold text-white/40 uppercase tracking-widest">
-              {activeCategoryPosition}/{totalStates}
-            </span>
           </div>
         )}
-
-        {/* Clock */}
-        <div className="relative z-10 px-8 pb-8">
-          <div className="rounded-2xl bg-black/20 backdrop-blur-sm px-4 py-3">
-            <p className="font-display text-3xl font-black text-white tabular-nums">{timeStr}</p>
-            <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider mt-0.5">{dateStr}</p>
-          </div>
-        </div>
       </div>
 
-      {/* ── RIGHT PANEL ── */}
-      <div className="flex flex-col flex-1 min-w-0">
-        {/* Right header bar */}
-        <div className="flex items-center justify-between px-8 py-5 border-b border-[#e8e4dc] bg-white/80 backdrop-blur-sm shrink-0">
-          <div className="flex items-center gap-2">
-            <div
-              className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: accent }}
-            />
-            <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#888]">Menu</span>
-            <span className="text-[#ccc] mx-1">/</span>
-            <span className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: accent }}>
-              {activeCategory?.name ?? '—'}
-            </span>
-          </div>
-          {activeItems.length > 0 && (
-            <span className="text-[10px] font-bold text-[#999] uppercase tracking-wider">
-              {activeItems.length} {activeItems.length === 1 ? 'item' : 'items'}
-            </span>
-          )}
+      {/* ── RIGHT: Menu List Panel ── */}
+      <div
+        className="flex flex-col flex-1 min-w-0 border-l"
+        style={{ borderColor: 'rgba(255,255,255,0.06)', animation: reduceMotion ? undefined : 't2PanelIn 600ms 200ms cubic-bezier(0.2,0.8,0.2,1) both' }}
+      >
+        {/* Panel header */}
+        <div className="shrink-0 px-8 pt-8 pb-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-1" style={{ color: accent }}>
+            {activeCategory?.name ?? 'Menu'}
+          </p>
+          <p className="font-display text-2xl font-black text-white leading-tight">
+            {activeItems.length > 1 ? `${activeItems.length} Selections` : activeItems.length === 1 ? '1 Selection' : 'No items'}
+          </p>
         </div>
 
-        {/* Items list */}
-        <div className="flex-1 overflow-y-auto px-8 py-6">
-          {!activeCategory || activeItems.length === 0 ? (
+        {/* Side items list (items 2…N) */}
+        <div className="flex-1 overflow-y-auto px-8 py-4" key={activeCategory?.id}>
+          {sideItems.length === 0 && !featuredItem && (
             <div className="flex h-full items-center justify-center">
-              <div className="text-center">
-                <div className="text-6xl mb-4 opacity-20">🍽️</div>
-                <p className="text-lg font-bold text-[#aaa]">No items to display</p>
-              </div>
+              <p className="text-white/20 text-sm font-bold uppercase tracking-widest">Nothing here yet</p>
             </div>
-          ) : (
-            <div className="space-y-0">
-              {activeItems.map((it, index) => (
-                <div
-                  key={it.id}
-                  className="t2-item group flex items-center gap-5 py-5 border-b border-[#eeece8] last:border-0"
-                  style={reduceMotion ? undefined : { animationDelay: `${index * 60}ms` }}
+          )}
+
+          {sideItems.length === 0 && featuredItem && (
+            <div className="flex h-full items-center justify-center flex-col gap-3">
+              <div className="text-5xl opacity-20">{activeCategory?.icon}</div>
+              <p className="text-white/20 text-xs font-bold uppercase tracking-widest">Only item in this category</p>
+            </div>
+          )}
+
+          <div className="space-y-1">
+            {sideItems.map((it, index) => (
+              <div
+                key={it.id}
+                className="t2-row flex items-center gap-4 rounded-2xl px-4 py-3.5 transition-colors"
+                style={{
+                  animationDelay: `${(index + 1) * 70}ms`,
+                  backgroundColor: index % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent',
+                }}
+              >
+                {/* Sequence number */}
+                <span
+                  className="shrink-0 font-display text-xs font-black tabular-nums w-6 text-right"
+                  style={{ color: `${accent}80` }}
                 >
-                  {/* Image or placeholder */}
-                  {showPhotos ? (
-                    it.image ? (
-                      <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-2xl shadow-md">
-                        <img src={it.image} alt={it.name} className="h-full w-full object-cover" decoding="async" loading="lazy" />
-                      </div>
-                    ) : (
-                      <div
-                        className="h-[72px] w-[72px] shrink-0 rounded-2xl flex items-center justify-center text-2xl"
-                        style={{ backgroundColor: `${accent}15` }}
-                      >
-                        {activeCategory?.icon ?? '🍽️'}
-                      </div>
-                    )
-                  ) : null}
+                  {String(index + 2).padStart(2, '0')}
+                </span>
 
-                  {/* Item info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2">
-                      <h3 className="font-display text-[22px] font-black text-[#1a1a1a] leading-tight truncate">
-                        {it.name}
-                      </h3>
-                      {showPrepTime && it.preparationTime > 0 && (
-                        <span className="shrink-0 flex items-center gap-1 text-[10px] font-bold text-[#bbb] uppercase tracking-wider">
-                          <Clock3 className="h-3 w-3" />
-                          {it.preparationTime}m
-                        </span>
-                      )}
+                {/* Thumbnail */}
+                {showPhotos && (
+                  it.image ? (
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl">
+                      <img src={it.image} alt={it.name} className="h-full w-full object-cover" decoding="async" loading="lazy" />
                     </div>
-                    {showDescription && it.description && (
-                      <p className="mt-1 text-sm text-[#888] leading-snug line-clamp-2">{it.description}</p>
-                    )}
-                  </div>
-
-                  {/* Price */}
-                  {showPrice && (
+                  ) : (
                     <div
-                      className="shrink-0 rounded-2xl px-4 py-2 font-display text-xl font-black tabular-nums"
-                      style={{ color: accent, backgroundColor: `${accent}12` }}
+                      className="h-12 w-12 shrink-0 rounded-xl flex items-center justify-center text-xl"
+                      style={{ backgroundColor: `${accent}18` }}
                     >
-                      {brand.currency}{it.price.toFixed(2)}
+                      {activeCategory?.icon ?? '🍽️'}
                     </div>
+                  )
+                )}
+
+                {/* Name + description */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-display text-[17px] font-black text-white leading-tight truncate">{it.name}</p>
+                  {showDescription && it.description && (
+                    <p className="text-[11px] text-white/40 leading-snug line-clamp-1 mt-0.5">{it.description}</p>
                   )}
                 </div>
-              ))}
+
+                {/* Right: price + prep */}
+                <div className="shrink-0 text-right">
+                  {showPrice && (
+                    <p className="font-display text-lg font-black tabular-nums" style={{ color: accent }}>
+                      {brand.currency}{it.price.toFixed(2)}
+                    </p>
+                  )}
+                  {showPrepTime && it.preparationTime > 0 && (
+                    <p className="flex items-center justify-end gap-1 text-[10px] text-white/30 mt-0.5">
+                      <Clock3 className="h-2.5 w-2.5" />
+                      {it.preparationTime}m
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bottom — clock + ticker */}
+        <div className="shrink-0 border-t" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
+          {/* Clock row */}
+          <div className="flex items-center justify-between px-8 py-4">
+            <div>
+              <p className="font-display text-2xl font-black text-white tabular-nums">{timeStr}</p>
+              <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider">{dateStr}</p>
+            </div>
+            {availableCategories.length > 1 && (
+              <div className="text-right">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Collection</p>
+                <p className="font-display text-2xl font-black text-white">
+                  {activeCategoryPosition}
+                  <span className="text-white/30 text-lg"> / {totalStates}</span>
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Scrolling category ticker */}
+          {availableCategories.length > 1 && (
+            <div
+              className="overflow-hidden py-2.5 border-t"
+              style={{ borderColor: `${accent}22`, backgroundColor: `${accent}10` }}
+            >
+              <div
+                className="flex gap-8 whitespace-nowrap"
+                style={{ animation: `t2Ticker ${availableCategories.length * 4}s linear infinite` }}
+              >
+                {[...availableCategories, ...availableCategories].map((cat, i) => (
+                  <span
+                    key={`${cat.id}-${i}`}
+                    className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em]"
+                    style={{ color: cat.id === availableCategories[activeCategoryPosition - 1]?.id ? accent : 'rgba(255,255,255,0.2)' }}
+                  >
+                    <span>{cat.icon}</span>
+                    <span>{cat.name}</span>
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
-
-        {/* Bottom ticker — all category names scrolling */}
-        {availableCategories.length > 1 && (
-          <div
-            className="shrink-0 border-t border-[#e8e4dc] overflow-hidden py-2.5 bg-white/60 backdrop-blur-sm"
-            style={{ borderTopColor: `${accent}22` }}
-          >
-            <div
-              className="flex gap-8 whitespace-nowrap"
-              style={{ animation: `t2Ticker ${availableCategories.length * 5}s linear infinite` }}
-            >
-              {[...availableCategories, ...availableCategories].map((cat, i) => (
-                <span
-                  key={`${cat.id}-${i}`}
-                  className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em]"
-                  style={{ color: cat.id === availableCategories[activeCategoryPosition - 1]?.id ? accent : '#bbb' }}
-                >
-                  <span>{cat.icon}</span>
-                  <span>{cat.name}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
