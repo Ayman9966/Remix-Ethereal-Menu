@@ -1,8 +1,0 @@
-uploads = []
-outputs = []
-
-[[generated]]
-id = "1NL8eTKqgGSihzybBK6K-"
-uri = "file://artifacts/savor-pitch/public/hero-restaurant.png"
-type = "image"
-title = "generated_image"

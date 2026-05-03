@@ -2,8 +2,8 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { useEffect, useState, useRef } from 'react';
 import {
   UtensilsCrossed, ChefHat, MonitorPlay, BarChart2, Settings2,
-  ShoppingCart, Globe, ArrowRight, Check, QrCode,
-  Printer, Zap, RefreshCw,
+  QrCode, Printer, Zap, Check, ArrowRight, Star, ShoppingCart,
+  Clock, Package, CheckCircle, Sparkles, Globe, RefreshCw,
 } from 'lucide-react';
 
 export const Route = createFileRoute('/landing')({
@@ -18,651 +18,611 @@ export const Route = createFileRoute('/landing')({
 
 const ACCENT = '#426564';
 
-/* ─── screen-cut config ───────────────────────────────────────────── */
-const MODULES = [
-  {
-    id: 'menu',
-    label: 'Digital Menu',
-    icon: Globe,
-    screenshot: '/ss-menu.jpg',
-    // crop: show the food list area
-    cut: { objectPosition: 'center 50%', height: 480 },
-    mobile: true,
-    url: '/t/1',
-  },
-  {
-    id: 'pos',
-    label: 'Point of Sale',
-    icon: ShoppingCart,
-    screenshot: '/ss-pos.jpg',
-    cut: { objectPosition: 'center 15%', height: 420 },
-    mobile: false,
-    url: '/pos',
-  },
-  {
-    id: 'kitchen',
-    label: 'Kitchen Display',
-    icon: ChefHat,
-    screenshot: '/ss-kitchen.jpg',
-    cut: { objectPosition: 'center 20%', height: 420 },
-    mobile: false,
-    url: '/kitchen',
-  },
-  {
-    id: 'board',
-    label: 'Board Display',
-    icon: MonitorPlay,
-    screenshot: '/ss-board.jpg',
-    cut: { objectPosition: 'center 30%', height: 420 },
-    mobile: false,
-    url: '/board',
-  },
-  {
-    id: 'analytics',
-    label: 'Analytics',
-    icon: BarChart2,
-    screenshot: '/ss-admin.jpg',
-    cut: { objectPosition: 'center 55%', height: 420 },
-    mobile: false,
-    url: '/admin',
-  },
-  {
-    id: 'admin',
-    label: 'Admin Panel',
-    icon: Settings2,
-    screenshot: '/ss-admin.jpg',
-    cut: { objectPosition: 'center 10%', height: 420 },
-    mobile: false,
-    url: '/admin',
-  },
-];
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function useLoopTimer(ms: number) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick(n => n + 1), ms);
+    return () => clearInterval(t);
+  }, [ms]);
+  return tick;
+}
 
-/* ─── Static mock menu screen (no iframe, instant load) ─────────── */
-const MOCK_ITEMS = [
-  { name: 'Grilled Octopus',      desc: 'Smoked paprika, crispy potatoes & chimichurri', price: '18.00', emoji: '🐙', badge: 'Popular' },
-  { name: 'Crispy Calamari',      desc: 'Lightly battered, served with marinara & lemon', price: '14.00', emoji: '🦑', badge: null },
-  { name: 'Truffle Mac Bites',    desc: 'Creamy macaroni, white truffle oil drizzle',    price: '12.00', emoji: '🧀', badge: null },
-  { name: 'Pan-Seared Salmon',    desc: 'Seasonal vegetables, lemon butter sauce',       price: '28.00', emoji: '🐟', badge: 'Chef Pick' },
-  { name: 'Molten Lava Cake',     desc: 'Warm chocolate cake, vanilla ice cream',        price: '9.00',  emoji: '🍫', badge: null },
-];
+function useStep(steps: number, ms: number) {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setStep(s => (s + 1) % steps), ms);
+    return () => clearInterval(t);
+  }, [steps, ms]);
+  return step;
+}
 
-function MockMenuScreen() {
-  const s: Record<string, React.CSSProperties> = {
-    root:    { width: '100%', background: '#fff', fontFamily: 'system-ui,-apple-system,sans-serif', overflowY: 'auto', height: '100%' },
-    header:  { background: ACCENT, padding: '22px 16px 16px', textAlign: 'center' },
-    logo:    { color: '#fff', fontWeight: 800, fontSize: 17, letterSpacing: '-0.3px' },
-    tagline: { color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 2 },
-    searchWrap: { background: '#f6f6f6', padding: '8px 12px 4px' },
-    search:  { background: '#fff', border: '1px solid #eaeaea', borderRadius: 10, padding: '6px 11px', fontSize: 10, color: '#bbb', display: 'flex', gap: 5, alignItems: 'center' },
-    pills:   { display: 'flex', gap: 5, padding: '8px 12px 6px', overflowX: 'auto' as const },
-    pill:    (active: boolean): React.CSSProperties => ({ background: active ? ACCENT : '#f0f0f0', color: active ? '#fff' : '#666', border: 'none', borderRadius: 20, padding: '4px 11px', fontSize: 9, fontWeight: 700, cursor: 'default', whiteSpace: 'nowrap' }),
-    sectionLabel: { padding: '6px 12px 3px', fontSize: 10, fontWeight: 800, color: '#333' },
-    card:    { margin: '4px 10px', background: '#fff', borderRadius: 13, padding: '9px 10px', border: '1px solid #f0f0f0', display: 'flex', gap: 9, alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-    img:     { width: 44, height: 44, background: '#f5f5f5', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 },
-    name:    { fontWeight: 700, fontSize: 11, color: '#1a1a1a', lineHeight: 1.2 },
-    desc:    { fontSize: 9, color: '#aaa', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, maxWidth: 110 },
-    price:   { fontWeight: 800, fontSize: 13, color: ACCENT, marginTop: 3 },
-    addBtn:  { background: ACCENT, color: '#fff', border: 'none', borderRadius: 8, width: 27, height: 27, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0, cursor: 'default', lineHeight: 1 },
-    badge:   { display: 'inline-block', background: '#fef3c7', color: '#92400e', fontSize: 8, fontWeight: 700, borderRadius: 5, padding: '1px 5px', marginLeft: 5 },
-    cartBar: { margin: '10px 10px 16px', background: ACCENT, borderRadius: 13, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-    cartTxt: { color: '#fff', fontSize: 11, fontWeight: 700 },
-    cartBtn: { color: '#fff', fontSize: 9, fontWeight: 800, background: 'rgba(255,255,255,0.18)', padding: '4px 9px', borderRadius: 7 },
-    callBtn: { margin: '0 10px 10px', border: `1px solid ${ACCENT}`, borderRadius: 10, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 10, fontWeight: 700, color: ACCENT },
-  };
+// ─── Animated Demos ───────────────────────────────────────────────────────────
+
+function MenuDemo() {
+  const step = useStep(4, 1400);
+  const items = ['Crispy Calamari', 'Truffle Pasta', 'Grilled Salmon', 'Lava Cake'];
+  const prices = ['14.00', '22.00', '28.00', '9.00'];
+  const emojis = ['🦑', '🍝', '🐟', '🍫'];
+  const [cartCount, setCartCount] = useState(0);
+  const prev = useRef(step);
+  useEffect(() => {
+    if (step !== prev.current) { setCartCount(c => c + 1); prev.current = step; }
+  }, [step]);
 
   return (
-    <div style={s.root}>
-      <div style={s.header}>
-        <div style={{ fontSize: 22 }}>🍽️</div>
-        <div style={s.logo}>Savor1</div>
-        <div style={s.tagline}>Modern Dining, Redefined</div>
+    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0f1613] p-4 font-sans text-white shadow-2xl" style={{ minHeight: 320 }}>
+      {/* bar */}
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${ACCENT}33` }}>
+            <UtensilsCrossed className="h-3.5 w-3.5" style={{ color: ACCENT }} />
+          </div>
+          <span className="text-xs font-bold" style={{ color: ACCENT }}>Savor Restaurant</span>
+        </div>
+        <div className="relative">
+          <ShoppingCart className="h-4 w-4 text-white/60" />
+          {cartCount > 0 && (
+            <span className="absolute -right-1.5 -top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-black text-white" style={{ backgroundColor: ACCENT }}>{cartCount}</span>
+          )}
+        </div>
       </div>
-
-      <div style={s.searchWrap}>
-        <div style={s.search}><span>🔍</span> Search menu...</div>
-      </div>
-
-      <div style={s.pills}>
-        {['All', 'Starters', 'Mains', 'Desserts', 'Drinks'].map((c, i) => (
-          <button key={c} style={s.pill(i === 1)}>{c}</button>
+      {/* tabs */}
+      <div className="mb-3 flex gap-1.5">
+        {['All', 'Starters', 'Mains', 'Desserts'].map((t, i) => (
+          <span key={t} className="rounded-full px-2 py-0.5 text-[10px] font-bold transition-all duration-300" style={{ backgroundColor: i === 0 ? ACCENT : 'rgba(255,255,255,0.06)', color: i === 0 ? '#fff' : 'rgba(255,255,255,0.5)' }}>{t}</span>
         ))}
       </div>
-
-      <div style={s.sectionLabel}>🟢 Starters</div>
-
-      {MOCK_ITEMS.slice(0, 3).map(item => (
-        <div key={item.name} style={s.card}>
-          <div style={s.img}>{item.emoji}</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={s.name}>
-              {item.name}
-              {item.badge && <span style={s.badge}>{item.badge}</span>}
+      {/* items */}
+      <div className="space-y-2">
+        {items.map((name, i) => (
+          <div key={name} className="flex items-center gap-3 rounded-xl p-2.5 transition-all duration-500" style={{ backgroundColor: step === i ? `${ACCENT}22` : 'rgba(255,255,255,0.04)', border: step === i ? `1px solid ${ACCENT}55` : '1px solid transparent' }}>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl" style={{ backgroundColor: `${ACCENT}1a` }}>{emojis[i]}</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-white">{name}</p>
+              <p className="text-[10px]" style={{ color: ACCENT }}>${prices[i]}</p>
             </div>
-            <div style={s.desc}>{item.desc}</div>
-            <div style={s.price}>{item.price}</div>
-          </div>
-          <div style={s.addBtn}>+</div>
-        </div>
-      ))}
-
-      <div style={s.sectionLabel}>🔵 Mains</div>
-      {MOCK_ITEMS.slice(3, 5).map(item => (
-        <div key={item.name} style={s.card}>
-          <div style={s.img}>{item.emoji}</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={s.name}>
-              {item.name}
-              {item.badge && <span style={s.badge}>{item.badge}</span>}
-            </div>
-            <div style={s.desc}>{item.desc}</div>
-            <div style={s.price}>{item.price}</div>
-          </div>
-          <div style={s.addBtn}>+</div>
-        </div>
-      ))}
-
-      <div style={{ height: 8 }} />
-      <div style={s.callBtn}>🔔 Call Waiter</div>
-      <div style={s.cartBar}>
-        <span style={s.cartTxt}>2 items · 32.00</span>
-        <span style={s.cartBtn}>View Cart →</span>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Phone frame wrapper ────────────────────────────────────────── */
-function PhoneMockup() {
-  return (
-    <div
-      className="relative mx-auto overflow-hidden"
-      style={{
-        width: 272,
-        border: '10px solid #1c1c1e',
-        borderRadius: '2.8rem',
-        background: '#000',
-        boxShadow: '0 0 0 2px #3a3a3c, 0 40px 80px rgba(0,0,0,0.55)',
-        height: 540,
-      }}
-    >
-      {/* notch */}
-      <div
-        className="absolute left-1/2 top-0 z-10 -translate-x-1/2 rounded-b-2xl bg-[#1c1c1e]"
-        style={{ height: 14, width: 88 }}
-      />
-      <div style={{ paddingTop: 14, height: '100%', overflowY: 'auto', overflowX: 'hidden' }}>
-        <MockMenuScreen />
-      </div>
-    </div>
-  );
-}
-
-/* ─── Small phone cut (image-based, for cards) ────────────────────── */
-function PhoneCut({ imgSrc, objectPosition = 'center 50%', height = 240 }: { imgSrc: string; objectPosition?: string; height?: number }) {
-  return (
-    <div
-      className="overflow-hidden rounded-[1.6rem] shadow-xl"
-      style={{ width: 176, border: '7px solid #1c1c1e', background: '#000' }}
-    >
-      <div className="flex justify-center bg-black" style={{ paddingTop: 6, paddingBottom: 4 }}>
-        <div className="rounded-full bg-[#1c1c1e]" style={{ height: 10, width: 60 }} />
-      </div>
-      <img
-        src={imgSrc}
-        alt="Mobile view"
-        className="w-full object-cover"
-        style={{ height, objectPosition }}
-      />
-    </div>
-  );
-}
-
-/* ─── Browser chrome mockup ──────────────────────────────────────── */
-function BrowserMockup({ url, children }: { url: string; children: React.ReactNode }) {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 shadow-2xl" style={{ background: '#111' }}>
-      <div className="flex items-center gap-3 border-b border-white/10 bg-[#1c1c1e] px-4 py-2.5">
-        <div className="flex gap-1.5 shrink-0">
-          <span className="block h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
-          <span className="block h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
-          <span className="block h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-        </div>
-        <div className="flex flex-1 justify-center">
-          <span className="rounded-md bg-[#2c2c2e] px-4 py-1 font-mono text-[11px] text-white/35">
-            savor.app{url}
-          </span>
-        </div>
-        <div className="w-14 shrink-0" />
-      </div>
-      {children}
-    </div>
-  );
-}
-
-/* ─── Module showcase ────────────────────────────────────────────── */
-function ModuleShowcase() {
-  const [active, setActive] = useState(0);
-  const [visible, setVisible] = useState(true);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const goTo = (idx: number) => {
-    if (idx === active) return;
-    setVisible(false);
-    setTimeout(() => { setActive(idx); setVisible(true); }, 180);
-  };
-
-  useEffect(() => {
-    timerRef.current = setInterval(() => {
-      setVisible(false);
-      setTimeout(() => { setActive(a => (a + 1) % MODULES.length); setVisible(true); }, 180);
-    }, 3800);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, []);
-
-  const mod = MODULES[active];
-
-  return (
-    <div className="mx-auto max-w-5xl px-6">
-      {/* tabs */}
-      <div className="mb-8 flex flex-wrap justify-center gap-2">
-        {MODULES.map((m, i) => {
-          const Icon = m.icon;
-          const isActive = active === i;
-          return (
-            <button
-              key={m.id}
-              onClick={() => {
-                if (timerRef.current) clearInterval(timerRef.current);
-                goTo(i);
-              }}
-              className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200"
-              style={isActive
-                ? { backgroundColor: ACCENT, color: '#fff', transform: 'scale(1.05)' }
-                : { backgroundColor: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.45)' }
-              }
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {m.label}
+            <button className="rounded-lg px-2 py-1 text-[10px] font-black text-white transition-all duration-300 shadow-sm" style={{ backgroundColor: step === i ? ACCENT : 'rgba(255,255,255,0.1)', transform: step === i ? 'scale(1.05)' : 'scale(1)' }}>
+              {step === i ? '✓ Added' : '+ Add'}
             </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function POSDemo() {
+  const step = useStep(5, 1200);
+  const cartItems = [
+    { name: 'Grilled Salmon', price: 28, qty: 1 },
+    { name: 'Truffle Pasta', price: 22, qty: 2 },
+    { name: 'Lava Cake', price: 9, qty: 1 },
+  ];
+  const visibleItems = cartItems.slice(0, Math.min(step, 3));
+  const total = visibleItems.reduce((s, i) => s + i.price * i.qty, 0);
+  const sent = step === 4;
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f1613] shadow-2xl" style={{ minHeight: 320 }}>
+      <div className="grid h-full" style={{ gridTemplateColumns: '1fr 140px' }}>
+        {/* left */}
+        <div className="border-r border-white/10 p-3 space-y-1.5">
+          <p className="text-[10px] font-black uppercase tracking-wider mb-2" style={{ color: ACCENT }}>Menu</p>
+          {['🐟 Salmon $28', '🍝 Pasta $22', '🍫 Lava Cake $9', '🦑 Calamari $14'].map((it, i) => (
+            <div key={it} className="rounded-xl p-2 text-[10px] font-semibold text-white/70 cursor-pointer hover:bg-white/5 transition-colors" style={{ backgroundColor: i < step && step < 4 ? `${ACCENT}18` : 'transparent', border: i < step && step < 4 ? `1px solid ${ACCENT}33` : '1px solid transparent' }}>{it}</div>
+          ))}
+        </div>
+        {/* right - cart */}
+        <div className="flex flex-col p-3">
+          <p className="text-[10px] font-black uppercase tracking-wider mb-2 text-white/60">Order T:3</p>
+          <div className="flex-1 space-y-1.5">
+            {visibleItems.map((item, i) => (
+              <div key={i} className="rounded-lg bg-white/5 px-2 py-1.5 transition-all duration-300" style={{ animation: 'slideIn 0.3s ease' }}>
+                <p className="text-[9px] font-semibold text-white leading-tight">{item.name}</p>
+                <div className="flex justify-between mt-0.5">
+                  <span className="text-[8px] text-white/40">×{item.qty}</span>
+                  <span className="text-[9px] font-bold" style={{ color: ACCENT }}>${item.price * item.qty}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 pt-2 border-t border-white/10">
+            <div className="flex justify-between mb-2">
+              <span className="text-[10px] text-white/50">Total</span>
+              <span className="text-xs font-black text-white">${total}</span>
+            </div>
+            <button className="w-full rounded-xl py-2 text-[10px] font-black text-white transition-all duration-500" style={{ backgroundColor: sent ? '#22c55e' : ACCENT, transform: sent ? 'scale(0.97)' : 'scale(1)' }}>
+              {sent ? '✓ Sent!' : 'Send to Kitchen'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KitchenDemo() {
+  const step = useStep(3, 1600);
+  const cols = [
+    { title: 'New', dot: '#f59e0b', orders: step === 0 ? 1 : 0 },
+    { title: 'Cooking', dot: '#3b82f6', orders: step === 1 ? 1 : 0 },
+    { title: 'Ready', dot: '#22c55e', orders: step === 2 ? 1 : 0 },
+  ];
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f1613] p-4 shadow-2xl" style={{ minHeight: 300 }}>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-black text-white">Kitchen Display</p>
+          <p className="text-[10px] text-white/40">Live order pipeline</p>
+        </div>
+        <div className="flex items-center gap-1.5 rounded-xl bg-white/5 px-3 py-1.5">
+          <Clock className="h-3 w-3 text-white/40" />
+          <span className="text-[10px] font-bold text-white/60">03:45 AM</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        {cols.map((col) => (
+          <div key={col.title}>
+            <div className="mb-2 flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: col.dot }} />
+              <span className="text-[10px] font-bold" style={{ color: col.dot }}>{col.title}</span>
+              <span className="rounded-full px-1.5 text-[9px] font-bold" style={{ backgroundColor: `${col.dot}22`, color: col.dot }}>{col.orders}</span>
+            </div>
+            <div className="min-h-[140px] rounded-xl border border-white/5 p-2 transition-all duration-500" style={{ backgroundColor: col.orders ? `${col.dot}0d` : 'rgba(255,255,255,0.02)' }}>
+              {col.orders > 0 && (
+                <div className="rounded-xl border p-3 transition-all duration-500" style={{ borderColor: `${col.dot}44`, backgroundColor: `${col.dot}11` }}>
+                  <p className="text-[10px] font-black" style={{ color: col.dot }}>#042</p>
+                  <p className="mt-1 text-[9px] text-white/60">Dine In · Table 4</p>
+                  <div className="mt-2 space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-[9px] text-white/50">Grilled Salmon</span>
+                      <span className="text-[9px] text-white/50">×1</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[9px] text-white/50">Pasta</span>
+                      <span className="text-[9px] text-white/50">×2</span>
+                    </div>
+                  </div>
+                  <button className="mt-2 w-full rounded-lg py-1 text-[9px] font-black text-white" style={{ backgroundColor: col.dot }}>
+                    {col.title === 'New' ? 'Start Preparing →' : col.title === 'Cooking' ? 'Mark Ready →' : '✓ Served'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BoardDemo() {
+  const step = useStep(4, 1800);
+  const cats = [
+    { icon: '🥗', name: 'Starters', items: ['Crispy Calamari $14', 'Bruschetta $10', 'Soup $8'] },
+    { icon: '🍝', name: 'Pasta', items: ['Truffle Pasta $22', 'Carbonara $18', 'Pesto $16'] },
+    { icon: '🥩', name: 'Mains', items: ['Grilled Salmon $28', 'Ribeye Steak $42', 'Duck Confit $36'] },
+    { icon: '🍫', name: 'Desserts', items: ['Lava Cake $9', 'Tiramisu $11', 'Sorbet $7'] },
+  ];
+  const cat = cats[step % cats.length];
+  const progress = ((step % cats.length) + 1) / cats.length;
+
+  return (
+    <div className="overflow-hidden rounded-2xl bg-[#0a0d13] p-4 shadow-2xl" style={{ minHeight: 300 }}>
+      {/* progress bar */}
+      <div className="mb-4 h-0.5 w-full overflow-hidden rounded-full bg-white/10">
+        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progress * 100}%`, backgroundColor: ACCENT }} />
+      </div>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl text-2xl border border-white/10 bg-black/30">{cat.icon}</div>
+          <div>
+            <p className="font-black uppercase italic text-white text-xl leading-tight">{cat.name}</p>
+            <p className="text-[10px] text-white/40 uppercase tracking-widest">{cat.items.length} selections</p>
+          </div>
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-widest text-white/30">{(step % cats.length) + 1}/{cats.length}</span>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {cat.items.map((item, i) => {
+          const [name, price] = item.split(' $');
+          return (
+            <div key={item} className="rounded-xl border border-white/10 bg-black/40 p-2.5 transition-all duration-300" style={{ animationDelay: `${i * 80}ms` }}>
+              <div className="mb-2 aspect-video w-full rounded-lg" style={{ background: `linear-gradient(135deg, ${ACCENT}33, ${ACCENT}11)` }} />
+              <p className="text-[10px] font-black text-white">{name}</p>
+              <div className="mt-1 inline-block rounded-lg bg-white px-1.5 py-0.5 text-[9px] font-black text-black">${price}</div>
+            </div>
           );
         })}
       </div>
+    </div>
+  );
+}
 
-      {/* preview */}
-      <div
-        className="transition-opacity duration-180"
-        style={{ opacity: visible ? 1 : 0 }}
-      >
-        {mod.mobile ? (
-          <div className="flex justify-center py-6">
-            <PhoneMockup />
+function AnalyticsDemo() {
+  const tick = useLoopTimer(120);
+  const baseValues = [420, 680, 540, 920, 1020, 760, 310];
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const max = 1020;
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f1613] p-4 shadow-2xl" style={{ minHeight: 300 }}>
+      <div className="mb-4 grid grid-cols-3 gap-2">
+        {[
+          { label: 'Revenue', val: '$9,287', delta: '+12%' },
+          { label: 'Orders', val: '200', delta: '+8%' },
+          { label: 'Avg Order', val: '$46.4', delta: '+4%' },
+        ].map(s => (
+          <div key={s.label} className="rounded-xl p-2.5" style={{ backgroundColor: `${ACCENT}18` }}>
+            <p className="text-[9px] text-white/40 uppercase tracking-wider">{s.label}</p>
+            <p className="text-sm font-black text-white mt-0.5">{s.val}</p>
+            <p className="text-[9px] font-bold text-emerald-400">{s.delta}</p>
           </div>
-        ) : (
-          <BrowserMockup url={mod.url}>
-            {/* padding-bottom % → responsive aspect-ratio cut, no fixed px heights */}
-            <div className="relative overflow-hidden" style={{ paddingBottom: '46%' }}>
-              <img
-                src={mod.screenshot}
-                alt={mod.label}
-                className="absolute inset-0 h-full w-full object-cover"
-                style={{ objectPosition: mod.cut.objectPosition }}
+        ))}
+      </div>
+      <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-white/40">Revenue — Last 7 Days</p>
+      <div className="flex items-end gap-1.5 h-24">
+        {baseValues.map((v, i) => {
+          const jitter = Math.sin(tick * 0.05 + i) * 30;
+          const height = Math.max(8, ((v + jitter) / max) * 96);
+          return (
+            <div key={i} className="flex flex-1 flex-col items-center gap-1">
+              <div
+                className="w-full rounded-t-md transition-all duration-700"
+                style={{ height, backgroundColor: i === 4 ? ACCENT : `${ACCENT}55` }}
               />
+              <span className="text-[8px] text-white/30">{days[i]}</span>
             </div>
-          </BrowserMockup>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AdminDemo() {
+  const step = useStep(3, 1600);
+  const tabs = ['Menu Items', 'Categories', 'Branding'];
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f1613] shadow-2xl" style={{ minHeight: 300 }}>
+      {/* tab bar */}
+      <div className="flex border-b border-white/10">
+        {tabs.map((t, i) => (
+          <button key={t} className="flex-1 px-2 py-2.5 text-[10px] font-bold transition-all duration-300" style={{ color: step === i ? ACCENT : 'rgba(255,255,255,0.3)', borderBottom: step === i ? `2px solid ${ACCENT}` : '2px solid transparent' }}>{t}</button>
+        ))}
+      </div>
+      <div className="p-4">
+        {step === 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-bold text-white/70">Menu Items</p>
+              <button className="rounded-lg px-2 py-1 text-[9px] font-black text-white" style={{ backgroundColor: ACCENT }}>+ Add Item</button>
+            </div>
+            {['Grilled Salmon — $28.00', 'Truffle Pasta — $22.00', 'Crispy Calamari — $14.00'].map(item => (
+              <div key={item} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
+                <span className="text-[10px] text-white/70">{item}</span>
+                <div className="flex gap-1">
+                  <span className="text-[8px] rounded-full px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 font-bold">Active</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {step === 1 && (
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-white/70 mb-3">Categories</p>
+            {[['🥗', 'Starters', '3 items'], ['🍝', 'Pasta', '4 items'], ['🥩', 'Mains', '5 items'], ['🍫', 'Desserts', '3 items']].map(([icon, name, count]) => (
+              <div key={name} className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2">
+                <span className="text-base">{icon}</span>
+                <span className="flex-1 text-[10px] font-semibold text-white/70">{name}</span>
+                <span className="text-[9px] text-white/30">{count}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {step === 2 && (
+          <div className="space-y-3">
+            <p className="text-xs font-bold text-white/70 mb-3">Branding</p>
+            <div>
+              <p className="text-[9px] text-white/40 mb-1">Restaurant Name</p>
+              <div className="rounded-xl bg-white/5 px-3 py-2 text-[10px] text-white/70">Savor Restaurant</div>
+            </div>
+            <div>
+              <p className="text-[9px] text-white/40 mb-1">Accent Color</p>
+              <div className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2">
+                <div className="h-4 w-4 rounded-md" style={{ backgroundColor: ACCENT }} />
+                <span className="text-[10px] text-white/70">#426564</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-[9px] text-white/40 mb-1">Currency</p>
+              <div className="rounded-xl bg-white/5 px-3 py-2 text-[10px] text-white/70">$ USD</div>
+            </div>
+          </div>
         )}
       </div>
+    </div>
+  );
+}
 
-      {/* dots */}
-      <div className="mt-5 flex justify-center gap-2">
-        {MODULES.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => { if (timerRef.current) clearInterval(timerRef.current); goTo(i); }}
-            className="h-1.5 rounded-full transition-all duration-300"
-            style={{ width: active === i ? 22 : 6, backgroundColor: active === i ? ACCENT : 'rgba(255,255,255,0.18)' }}
-          />
+function QRDemo() {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f1613] p-4 shadow-2xl" style={{ minHeight: 300 }}>
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-xs font-bold text-white/70">Table QR Codes</p>
+        <button className="rounded-lg px-2 py-1 text-[9px] font-black text-white" style={{ backgroundColor: ACCENT }}>Print All</button>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {Array.from({ length: 8 }, (_, i) => (
+          <div key={i} className="flex flex-col items-center gap-1.5 rounded-xl bg-white/5 p-2">
+            <p className="text-[8px] font-bold text-white/40">Table {i + 1}</p>
+            <div className="rounded-lg bg-white p-1.5">
+              <svg width="36" height="36" viewBox="0 0 36 36">
+                {/* QR code pattern */}
+                <rect width="36" height="36" fill="white" />
+                {[0,1,2,3,4,5,6].map(r => [0,1,2,3,4,5,6].map(c => {
+                  const inTopLeft = r < 7 && c < 7;
+                  const inTopRight = r < 7 && c > 28;
+                  const inBotLeft = r > 28 && c < 7;
+                  const border = (r === 0 || r === 6 || c === 0 || c === 6) && inTopLeft;
+                  const inner = r >= 2 && r <= 4 && c >= 2 && c <= 4 && inTopLeft;
+                  if (!border && !inner) return null;
+                  return <rect key={`${r}-${c}`} x={c * 5} y={r * 5} width="5" height="5" fill="#000" />;
+                }))}
+                {/* data pattern */}
+                {Array.from({ length: 20 }, (_, k) => (
+                  <rect key={k} x={Math.floor(Math.random() * 36)} y={Math.floor(Math.random() * 36)} width="2" height="2" fill="#000" opacity={0.6} />
+                ))}
+              </svg>
+            </div>
+            <p className="text-[7px] text-white/30">/t{i + 1}</p>
+          </div>
         ))}
       </div>
     </div>
   );
 }
 
-/* ─── Main page ──────────────────────────────────────────────────── */
+// ─── Feature sections data ─────────────────────────────────────────────────────
+const FEATURES = [
+  {
+    badge: '01 · Digital Menu',
+    title: 'A menu your customers will love to browse',
+    description: 'Customers scan a QR code and get a beautiful, fast digital menu — no app download needed. They can browse categories, search dishes, see prep times, and place orders right from their phone.',
+    bullets: ['QR-coded per table or takeaway link', 'Real-time availability — sold-out items auto-hide', 'Cart with taxes, service charge & fees applied', 'Dine-in and takeaway ordering modes'],
+    Demo: MenuDemo,
+    flip: false,
+  },
+  {
+    badge: '02 · Point of Sale',
+    title: 'A POS built for speed',
+    description: 'Staff tap items, build orders in seconds, and fire them straight to the kitchen. No paper, no miscommunication — everything is real-time. Auto-print receipts the moment an order is placed.',
+    bullets: ['Lightning-fast item grid with category tabs', 'Inline notes per item (e.g. "no onions")', 'Auto-print invoice on 58mm or 80mm paper', 'Full order history with reprint support'],
+    Demo: POSDemo,
+    flip: true,
+  },
+  {
+    badge: '03 · Kitchen Display',
+    title: 'Keep the kitchen in perfect sync',
+    description: 'Replace paper tickets with a live kitchen display. Orders flow in the moment they\'re placed, move through New → Cooking → Ready with one tap, and late orders are flagged in red automatically.',
+    bullets: ['Color-coded pipeline (New / Cooking / Ready)', 'Late order alerts after configurable threshold', 'Waiter-call notifications with bell badge', 'Manager approval queue for new orders'],
+    Demo: KitchenDemo,
+    flip: false,
+  },
+  {
+    badge: '04 · Board Display',
+    title: 'Digital signage that sells for you',
+    description: 'Put any TV or screen to work. The board display cycles through your menu categories with cinematic animations — prices, photos, descriptions — all auto-updating whenever you edit your menu.',
+    bullets: ['Two premium templates: Dark Cinematic & Grand Spotlight', 'Configurable cycle speed and column count', 'Shows photos, prices, prep time, description', 'Live preview + shareable URL for any screen'],
+    Demo: BoardDemo,
+    flip: true,
+  },
+  {
+    badge: '05 · Analytics',
+    title: 'Know your numbers, grow your revenue',
+    description: 'Track revenue, order volume, and top-selling items across any time period. See your busiest days at a glance and understand exactly what\'s driving your sales.',
+    bullets: ['7-day revenue trend chart', 'Top 5 items by quantity and revenue', 'Average order value tracking', 'Recent orders summary with status'],
+    Demo: AnalyticsDemo,
+    flip: false,
+  },
+  {
+    badge: '06 · Admin Panel',
+    title: 'Total control from one dashboard',
+    description: 'Add and edit menu items, reorder categories with drag-and-drop, configure your branding, taxes, and fees — all without touching any code. Changes go live instantly across every device.',
+    bullets: ['Menu item & category management with drag-and-drop', 'Full branding: name, logo, accent color, tagline', 'Configurable tax, service charge & additional fees', 'Per-type (dine-in / takeaway) fee application'],
+    Demo: AdminDemo,
+    flip: true,
+  },
+];
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 function LandingPage() {
   return (
     <div className="min-h-screen bg-white font-sans antialiased">
       <style>{`
         @keyframes fadeUp {
-          from { opacity:0; transform:translateY(18px); }
-          to   { opacity:1; transform:translateY(0); }
+          from { opacity: 0; transform: translateY(24px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
-        @keyframes floatPhone {
-          0%,100% { transform: translateY(0px) rotate(-1deg); }
-          50%     { transform: translateY(-10px) rotate(-1deg); }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
-        .fu  { animation: fadeUp 0.65s cubic-bezier(.2,.8,.2,1) both; }
-        .d1  { animation-delay:.08s; }
-        .d2  { animation-delay:.18s; }
-        .d3  { animation-delay:.28s; }
-        .d4  { animation-delay:.38s; }
-        .phone-float { animation: floatPhone 5s ease-in-out infinite; }
-        .live { animation: livePulse 2s ease-in-out infinite; }
-        @keyframes livePulse { 0%,100%{opacity:1}50%{opacity:.35} }
+        @keyframes pulse-dot {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+        .fade-up { animation: fadeUp 0.7s cubic-bezier(0.2,0.8,0.2,1) both; }
+        .fade-up-d1 { animation-delay: 0.1s; }
+        .fade-up-d2 { animation-delay: 0.2s; }
+        .fade-up-d3 { animation-delay: 0.3s; }
+        .live-dot { animation: pulse-dot 1.8s ease-in-out infinite; }
       `}</style>
 
-      {/* ── Nav ─────────────────────────────────────────────────── */}
+      {/* ── Nav ── */}
       <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3.5">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: ACCENT }}>
-              <UtensilsCrossed className="h-4 w-4 text-white" />
+              <UtensilsCrossed className="h-4.5 w-4.5 text-white" />
             </div>
             <span className="text-lg font-black tracking-tight text-gray-900">Savor</span>
           </div>
           <div className="hidden items-center gap-8 md:flex">
-            <a href="#platform" className="text-sm font-medium text-gray-500 transition hover:text-gray-900">Platform</a>
-            <a href="#roles"    className="text-sm font-medium text-gray-500 transition hover:text-gray-900">Who It's For</a>
-            <a href="#how"      className="text-sm font-medium text-gray-500 transition hover:text-gray-900">How It Works</a>
+            {['Features', 'Kitchen', 'Analytics', 'Pricing'].map(l => (
+              <a key={l} href={`#${l.toLowerCase()}`} className="text-sm font-medium text-gray-500 transition-colors hover:text-gray-900">{l}</a>
+            ))}
           </div>
           <div className="flex items-center gap-3">
-            <Link to="/t/1" className="hidden rounded-xl px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100 md:block">
-              View Menu
-            </Link>
-            <Link
-              to="/admin"
-              className="rounded-xl px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
-              style={{ backgroundColor: ACCENT }}
-            >
-              Open Dashboard
-            </Link>
+            <Link to="/menu" className="hidden rounded-xl px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100 md:block">Live Demo</Link>
+            <Link to="/admin" className="rounded-xl px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:opacity-90" style={{ backgroundColor: ACCENT }}>Get Started</Link>
           </div>
         </div>
       </nav>
 
-      {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section
-        className="relative overflow-hidden"
-        style={{ background: 'linear-gradient(150deg,#06090f 0%,#0c1c1b 60%,#091614 100%)' }}
-      >
+      {/* ── Hero ── */}
+      <section className="relative overflow-hidden" style={{ background: `linear-gradient(160deg, #0a0d13 0%, #0f1a19 60%, #131f1e 100%)` }}>
+        {/* glow blobs */}
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full opacity-20 blur-[120px]" style={{ backgroundColor: ACCENT }} />
+          <div className="absolute left-1/4 top-0 h-96 w-96 rounded-full opacity-20 blur-[120px]" style={{ backgroundColor: ACCENT }} />
+          <div className="absolute right-1/4 bottom-0 h-64 w-64 rounded-full opacity-10 blur-[80px]" style={{ backgroundColor: ACCENT }} />
         </div>
 
-        <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-6 py-24 lg:grid-cols-2 lg:py-28">
-          {/* left */}
-          <div>
-            <div className="fu mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold text-white/60">
-              <span className="live h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              All data is live — no refresh needed
-            </div>
-
-            <h1 className="fu d1 text-5xl font-black leading-[1.06] tracking-tight text-white xl:text-6xl">
-              Your restaurant,<br />
-              <span style={{ color: ACCENT }}>fully digital.</span>
-            </h1>
-
-            <p className="fu d2 mt-5 max-w-md text-lg leading-relaxed text-white/50">
-              One platform connecting your menu, counter, kitchen, signage, and analytics — all syncing live, zero paper.
-            </p>
-
-            <div className="fu d3 mt-9 flex flex-wrap gap-3">
-              <Link
-                to="/admin"
-                className="flex items-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-black text-white shadow-lg transition hover:opacity-90"
-                style={{ backgroundColor: ACCENT }}
-              >
-                Open Admin Panel <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                to="/t/1"
-                className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-6 py-3.5 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white/10"
-              >
-                <Globe className="h-4 w-4" /> View Digital Menu
-              </Link>
-            </div>
-
-            <div className="fu d4 mt-8 flex flex-wrap gap-x-6 gap-y-2">
-              {['Real-time sync', 'Auto-print receipts', 'No app download needed', 'Unlimited tables'].map(f => (
-                <span key={f} className="flex items-center gap-1.5 text-xs text-white/35">
-                  <Check className="h-3 w-3 text-emerald-500" /> {f}
-                </span>
-              ))}
-            </div>
+        <div className="relative mx-auto max-w-7xl px-6 pb-24 pt-24 text-center">
+          <div className="fade-up mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold text-white/70 backdrop-blur-sm">
+            <span className="live-dot h-1.5 w-1.5 rounded-full" style={{ backgroundColor: '#22c55e' }} />
+            Now live — Real-time restaurant management
           </div>
 
-          {/* right — phone mockup (customer-facing product first) */}
-          <div className="flex justify-center lg:justify-end">
-            <div className="phone-float">
-              <PhoneMockup />
-              {/* floating label */}
-              <div className="mx-auto mt-4 flex w-fit items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 backdrop-blur-sm">
-                <Globe className="h-3.5 w-3.5" style={{ color: ACCENT }} />
-                <span className="text-xs font-semibold text-white/60">
-                  Guests scan → menu opens instantly
-                </span>
-              </div>
-            </div>
+          <h1 className="fade-up fade-up-d1 mx-auto max-w-4xl text-5xl font-black leading-tight tracking-tight text-white md:text-7xl">
+            Your restaurant,<br />
+            <span style={{ color: ACCENT }}>fully digital.</span>
+          </h1>
+
+          <p className="fade-up fade-up-d2 mx-auto mt-6 max-w-2xl text-lg text-white/55 leading-relaxed">
+            One platform for your digital menu, point of sale, kitchen display, board signage, and analytics. Everything syncs in real-time — zero complexity, zero paper.
+          </p>
+
+          <div className="fade-up fade-up-d3 mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Link to="/admin" className="flex items-center gap-2 rounded-2xl px-8 py-4 text-base font-black text-white shadow-lg transition hover:opacity-90 hover:-translate-y-0.5" style={{ backgroundColor: ACCENT }}>
+              Open Admin Panel <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link to="/menu" className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-base font-bold text-white backdrop-blur-sm transition hover:bg-white/10">
+              <Globe className="h-4 w-4" /> View Digital Menu
+            </Link>
+          </div>
+
+          {/* quick links row */}
+          <div className="fade-up fade-up-d3 mt-8 flex flex-wrap justify-center gap-3">
+            {[
+              { label: 'POS', to: '/pos', icon: ShoppingCart },
+              { label: 'Kitchen', to: '/kitchen', icon: ChefHat },
+              { label: 'Board', to: '/board', icon: MonitorPlay },
+            ].map(({ label, to, icon: Icon }) => (
+              <Link key={label} to={to} className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/60 transition hover:bg-white/10 hover:text-white">
+                <Icon className="h-3.5 w-3.5" /> {label}
+              </Link>
+            ))}
           </div>
         </div>
 
+        {/* bottom fade */}
         <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent" />
       </section>
 
-      {/* ── Stats ────────────────────────────────────────────────── */}
-      <section className="border-y border-gray-100 bg-gray-50/60 py-10">
-        <div className="mx-auto grid max-w-4xl grid-cols-2 gap-8 px-6 md:grid-cols-4">
+      {/* ── Stats bar ── */}
+      <section className="border-y border-gray-100 bg-gray-50/60 py-10" id="features">
+        <div className="mx-auto grid max-w-5xl grid-cols-2 gap-8 px-6 md:grid-cols-4">
           {[
-            { val: '6',    label: 'Connected modules' },
-            { val: '<1s',  label: 'Cross-device sync' },
-            { val: '∞',    label: 'Tables supported' },
-            { val: '0',    label: 'Minutes to set up' },
+            { val: '6', label: 'Integrated modules' },
+            { val: '∞', label: 'Tables supported' },
+            { val: '< 1s', label: 'Real-time sync' },
+            { val: '0', label: 'Setup complexity' },
           ].map(s => (
             <div key={s.label} className="text-center">
-              <p className="text-4xl font-black" style={{ color: ACCENT }}>{s.val}</p>
+              <p className="text-4xl font-black text-gray-900" style={{ color: ACCENT }}>{s.val}</p>
               <p className="mt-1 text-sm text-gray-500">{s.label}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── Platform showcase ────────────────────────────────────── */}
-      <section
-        className="py-20"
-        style={{ background: 'linear-gradient(160deg,#06090f,#0d1a19)' }}
-        id="platform"
-      >
-        <div className="mb-12 px-6 text-center">
-          <p className="mb-3 text-xs font-black uppercase tracking-widest" style={{ color: ACCENT }}>
-            The Platform
-          </p>
-          <h2 className="text-3xl font-black text-white md:text-4xl">
-            Every screen your restaurant needs
-          </h2>
-          <p className="mt-3 text-sm text-white/40">
-            One system — six live views, each built for a specific job.
-          </p>
-        </div>
+      {/* ── Feature Sections ── */}
+      {FEATURES.map((f) => {
+        const { Demo } = f;
+        return (
+          <section key={f.badge} className="py-20">
+            <div className={`mx-auto flex max-w-7xl flex-col items-center gap-12 px-6 lg:flex-row ${f.flip ? 'lg:flex-row-reverse' : ''}`}>
+              {/* text */}
+              <div className="flex-1 max-w-xl">
+                <span className="mb-4 inline-block rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider text-white" style={{ backgroundColor: ACCENT }}>{f.badge}</span>
+                <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight text-gray-900 md:text-4xl">{f.title}</h2>
+                <p className="mt-4 text-base leading-relaxed text-gray-500">{f.description}</p>
+                <ul className="mt-6 space-y-2.5">
+                  {f.bullets.map(b => (
+                    <li key={b} className="flex items-start gap-2.5">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                      <span className="text-sm text-gray-600">{b}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {/* demo */}
+              <div className="w-full flex-1 max-w-lg">
+                <Demo />
+              </div>
+            </div>
+          </section>
+        );
+      })}
 
-        <ModuleShowcase />
+      {/* ── QR Codes bonus section ── */}
+      <section className="bg-gray-50/60 py-20">
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-12 px-6 lg:flex-row">
+          <div className="flex-1 max-w-xl">
+            <span className="mb-4 inline-block rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider text-white" style={{ backgroundColor: ACCENT }}>07 · QR Codes</span>
+            <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight text-gray-900 md:text-4xl">One QR per table — ready in seconds</h2>
+            <p className="mt-4 text-base leading-relaxed text-gray-500">Generate a unique QR code for every table in your restaurant. Download as SVG or print all at once. Customers scan to open your menu with their table pre-selected — no app, no friction.</p>
+            <ul className="mt-6 space-y-2.5">
+              {['Auto-generated for all your tables', 'Downloadable SVG per table', 'Bulk print-all in one click', 'URL links directly to the right table view'].map(b => (
+                <li key={b} className="flex items-start gap-2.5">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                  <span className="text-sm text-gray-600">{b}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="w-full flex-1 max-w-lg"><QRDemo /></div>
+        </div>
       </section>
 
-      {/* ── Who It's For ─────────────────────────────────────────── */}
-      <section className="py-24 px-6" id="roles">
-        <div className="mx-auto max-w-7xl">
+      {/* ── More features grid ── */}
+      <section className="py-20">
+        <div className="mx-auto max-w-7xl px-6">
           <div className="mb-14 text-center">
-            <p className="mb-3 text-xs font-black uppercase tracking-widest" style={{ color: ACCENT }}>
-              Who It's For
-            </p>
-            <h2 className="text-3xl font-black tracking-tight text-gray-900 md:text-4xl">
-              Built for every person in your restaurant
-            </h2>
+            <h2 className="text-3xl font-black tracking-tight text-gray-900 md:text-4xl">Everything else you need</h2>
+            <p className="mt-3 text-gray-500">The details that make running a restaurant smoother.</p>
           </div>
-
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* Customers */}
-            <div className="flex flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
-              <div className="overflow-hidden bg-gray-50">
-                {/* phone screen cut */}
-                <div className="flex justify-center py-6">
-                  <PhoneCut imgSrc="/ss-menu.jpg" objectPosition="center 52%" height={240} />
-                </div>
-              </div>
-              <div className="flex flex-1 flex-col p-6">
-                <div className="mb-2 flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ backgroundColor: `${ACCENT}18` }}>
-                    <Globe className="h-3.5 w-3.5" style={{ color: ACCENT }} />
-                  </div>
-                  <span className="text-xs font-black uppercase tracking-wider text-gray-400">For Customers</span>
-                </div>
-                <h3 className="mt-1 text-lg font-black text-gray-900">A menu they'll actually enjoy</h3>
-                <p className="mt-2 text-sm leading-relaxed text-gray-500">
-                  Scan the QR, browse categories, pick dishes, and order — all from their phone. No app, no waiting.
-                </p>
-                <ul className="mt-4 space-y-1.5">
-                  {['Instant QR access, no download', 'Browse, filter & add to cart', 'Live order status tracking'].map(b => (
-                    <li key={b} className="flex items-center gap-2 text-sm text-gray-600">
-                      <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" /> {b}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  to="/t/1"
-                  className="mt-5 inline-flex items-center gap-1.5 text-sm font-bold transition hover:opacity-80"
-                  style={{ color: ACCENT }}
-                >
-                  View live menu <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-            </div>
-
-            {/* Staff */}
-            <div className="flex flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
-              <div className="overflow-hidden bg-gray-50">
-                {/* kitchen screen cut — responsive aspect ratio */}
-                <div className="relative overflow-hidden" style={{ paddingBottom: '58%' }}>
-                  <img
-                    src="/ss-kitchen.jpg"
-                    alt="Kitchen display"
-                    className="absolute inset-0 h-full w-full object-cover"
-                    style={{ objectPosition: 'center 18%' }}
-                  />
-                </div>
-              </div>
-              <div className="flex flex-1 flex-col p-6">
-                <div className="mb-2 flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ backgroundColor: `${ACCENT}18` }}>
-                    <ChefHat className="h-3.5 w-3.5" style={{ color: ACCENT }} />
-                  </div>
-                  <span className="text-xs font-black uppercase tracking-wider text-gray-400">For Staff</span>
-                </div>
-                <h3 className="mt-1 text-lg font-black text-gray-900">Faster service, fewer mistakes</h3>
-                <p className="mt-2 text-sm leading-relaxed text-gray-500">
-                  Orders flow from the POS or menu straight to the kitchen display — no shouting, no paper tickets, no guesswork.
-                </p>
-                <ul className="mt-4 space-y-1.5">
-                  {['POS fires orders instantly', 'Kitchen sees live ticket pipeline', 'Late orders flagged automatically'].map(b => (
-                    <li key={b} className="flex items-center gap-2 text-sm text-gray-600">
-                      <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" /> {b}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-5 flex gap-3">
-                  <Link to="/pos"     className="text-sm font-bold transition hover:opacity-80" style={{ color: ACCENT }}>POS <ArrowRight className="inline h-3 w-3" /></Link>
-                  <Link to="/kitchen" className="text-sm font-bold transition hover:opacity-80" style={{ color: ACCENT }}>Kitchen <ArrowRight className="inline h-3 w-3" /></Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Managers */}
-            <div className="flex flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
-              <div className="overflow-hidden bg-gray-50">
-                {/* analytics screen cut — responsive aspect ratio */}
-                <div className="relative overflow-hidden" style={{ paddingBottom: '58%' }}>
-                  <img
-                    src="/ss-admin.jpg"
-                    alt="Analytics dashboard"
-                    className="absolute inset-0 h-full w-full object-cover"
-                    style={{ objectPosition: 'center 60%' }}
-                  />
-                </div>
-              </div>
-              <div className="flex flex-1 flex-col p-6">
-                <div className="mb-2 flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ backgroundColor: `${ACCENT}18` }}>
-                    <BarChart2 className="h-3.5 w-3.5" style={{ color: ACCENT }} />
-                  </div>
-                  <span className="text-xs font-black uppercase tracking-wider text-gray-400">For Managers</span>
-                </div>
-                <h3 className="mt-1 text-lg font-black text-gray-900">Full control from one dashboard</h3>
-                <p className="mt-2 text-sm leading-relaxed text-gray-500">
-                  Edit your menu, manage branding, watch revenue trends, and spot your busiest hours — all from the admin panel.
-                </p>
-                <ul className="mt-4 space-y-1.5">
-                  {['Revenue, orders & top items at a glance', 'Peak hours & busiest days charts', 'Menu, branding & fees in one place'].map(b => (
-                    <li key={b} className="flex items-center gap-2 text-sm text-gray-600">
-                      <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" /> {b}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  to="/admin"
-                  className="mt-5 inline-flex items-center gap-1.5 text-sm font-bold transition hover:opacity-80"
-                  style={{ color: ACCENT }}
-                >
-                  Open dashboard <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Under-the-hood features ──────────────────────────────── */}
-      <section className="bg-gray-50/60 py-20 px-6">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-12 text-center">
-            <p className="mb-3 text-xs font-black uppercase tracking-widest" style={{ color: ACCENT }}>
-              Under the Hood
-            </p>
-            <h2 className="text-3xl font-black text-gray-900 md:text-4xl">
-              The details that matter
-            </h2>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              {
-                icon: QrCode,
-                title: 'QR per table',
-                desc: 'Auto-generated QR codes for every table. Download as PNG or bulk-print in one click.',
-              },
-              {
-                icon: Printer,
-                title: 'Auto-print receipts',
-                desc: 'Fire a receipt the moment an order is placed. Supports 58mm and 80mm thermal printers.',
-              },
-              {
-                icon: Zap,
-                title: 'Real-time everything',
-                desc: 'POS, kitchen, board and analytics all update live via Supabase Realtime — zero polling.',
-              },
-              {
-                icon: RefreshCw,
-                title: 'Taxes & fees built in',
-                desc: 'Configure tax, service charge, and custom fees separately for dine-in and takeaway.',
-              },
-            ].map(c => {
-              const Icon = c.icon;
+              { icon: Printer, title: 'Auto-print invoices', desc: 'Fire a receipt the moment an order is placed. Supports 58mm and 80mm thermal printers.' },
+              { icon: Zap, title: 'Real-time sync', desc: 'Every device — POS, kitchen, board — updates live without refresh. Powered by Supabase Realtime.' },
+              { icon: RefreshCw, title: 'Tax & service charges', desc: 'Configure tax, service charge, and custom fees separately for dine-in and takeaway orders.' },
+              { icon: Star, title: 'Custom branding', desc: 'Set your restaurant name, tagline, logo, hero image, and accent color. Your menu, your identity.' },
+              { icon: Globe, title: 'Works on any device', desc: 'No native app required. Customers open your menu in any mobile browser by scanning the QR.' },
+              { icon: CheckCircle, title: 'Order approval queue', desc: 'Optional manager approval step before orders enter the kitchen pipeline.' },
+            ].map(card => {
+              const Icon = card.icon;
               return (
-                <div key={c.title} className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                  <div
-                    className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl"
-                    style={{ backgroundColor: `${ACCENT}15` }}
-                  >
+                <div key={card.title} className="group rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
+                  <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: `${ACCENT}18` }}>
                     <Icon className="h-5 w-5" style={{ color: ACCENT }} />
                   </div>
-                  <h3 className="text-sm font-bold text-gray-900">{c.title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-gray-500">{c.desc}</p>
+                  <h3 className="text-sm font-bold text-gray-900">{card.title}</h3>
+                  <p className="mt-1.5 text-sm text-gray-500 leading-relaxed">{card.desc}</p>
                 </div>
               );
             })}
@@ -670,109 +630,65 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* ── How It Works ─────────────────────────────────────────── */}
-      <section
-        className="py-24 px-6"
-        style={{ background: 'linear-gradient(150deg,#06090f,#0c1c1b)' }}
-        id="how"
-      >
-        <div className="mx-auto max-w-5xl text-center">
-          <p className="mb-3 text-xs font-black uppercase tracking-widest" style={{ color: ACCENT }}>
-            Get Started
-          </p>
-          <h2 className="text-3xl font-black text-white md:text-4xl">Up and running in 3 steps</h2>
-
-          <div className="mt-14 grid gap-5 md:grid-cols-3">
+      {/* ── How it works ── */}
+      <section className="py-20" style={{ background: `linear-gradient(160deg, #0a0d13, #0f1a19)` }}>
+        <div className="mx-auto max-w-4xl px-6 text-center">
+          <span className="mb-4 inline-block rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider text-white/60 border border-white/10">Get started in minutes</span>
+          <h2 className="mt-3 text-3xl font-black text-white md:text-4xl">Up and running in 3 steps</h2>
+          <div className="mt-14 grid gap-8 md:grid-cols-3">
             {[
-              {
-                n: '01',
-                title: 'Build your menu',
-                desc: 'Add categories and items in Admin. Upload photos, set prices, configure branding — takes minutes.',
-                to: '/admin',
-              },
-              {
-                n: '02',
-                title: 'Print QR codes',
-                desc: 'Generate a QR per table and place them. Your digital menu is live the moment they\'re scanned.',
-                to: '/admin',
-              },
-              {
-                n: '03',
-                title: 'Open your screens',
-                desc: 'Kitchen on a tablet, Board on the TV, POS at the counter. Everything links automatically.',
-                to: '/kitchen',
-              },
+              { num: '01', title: 'Set up your menu', desc: 'Add categories and items in the Admin panel. Upload photos, set prices, and configure your branding in minutes.' },
+              { num: '02', title: 'Print your QR codes', desc: 'Generate QR codes for every table and download or print them. Place on tables — your digital menu is live.' },
+              { num: '03', title: 'Open the kitchen display', desc: 'Put Kitchen on a tablet, Board on a TV, and POS on the counter. Everything is linked, real-time, zero config.' },
             ].map(s => (
-              <div key={s.n} className="flex flex-col rounded-2xl border border-white/10 bg-white/5 p-7 text-left">
-                <span className="text-5xl font-black" style={{ color: ACCENT }}>{s.n}</span>
-                <h3 className="mt-4 text-base font-bold text-white">{s.title}</h3>
-                <p className="mt-2 flex-1 text-sm leading-relaxed text-white/45">{s.desc}</p>
-                <Link
-                  to={s.to as any}
-                  className="mt-6 inline-flex items-center gap-1.5 text-xs font-bold transition hover:underline"
-                  style={{ color: ACCENT }}
-                >
-                  Go there <ArrowRight className="h-3 w-3" />
-                </Link>
+              <div key={s.num} className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm text-left">
+                <p className="text-4xl font-black" style={{ color: ACCENT }}>{s.num}</p>
+                <h3 className="mt-3 text-base font-bold text-white">{s.title}</h3>
+                <p className="mt-2 text-sm text-white/50 leading-relaxed">{s.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── CTA ──────────────────────────────────────────────────── */}
-      <section className="py-24 px-6">
-        <div className="mx-auto max-w-3xl text-center">
-          <div
-            className="rounded-3xl p-14 shadow-2xl"
-            style={{ background: `linear-gradient(135deg, ${ACCENT}, #1e3634)` }}
-          >
-            <h2 className="text-4xl font-black text-white md:text-5xl">
-              Ready to go paperless?
-            </h2>
-            <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-white/60">
-              Everything is already set up. Open the dashboard, add your menu, and your restaurant is live.
-            </p>
-            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link
-                to="/admin"
-                className="flex items-center gap-2 rounded-2xl bg-white px-8 py-4 text-sm font-black shadow-lg transition hover:opacity-90"
-                style={{ color: ACCENT }}
-              >
-                Open Admin Dashboard <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                to="/t/1"
-                className="flex items-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-8 py-4 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white/20"
-              >
-                <Globe className="h-4 w-4" /> View Live Menu
-              </Link>
-            </div>
+      {/* ── CTA ── */}
+      <section className="py-24">
+        <div className="mx-auto max-w-3xl px-6 text-center">
+          <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-3xl shadow-lg" style={{ backgroundColor: ACCENT }}>
+            <Sparkles className="h-8 w-8 text-white" />
+          </div>
+          <h2 className="text-4xl font-black tracking-tight text-gray-900 md:text-5xl">Ready to go fully digital?</h2>
+          <p className="mx-auto mt-4 max-w-xl text-lg text-gray-500">Open the Admin panel, add your menu, and print your first QR codes — your restaurant runs smarter today.</p>
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Link to="/admin" className="flex items-center gap-2 rounded-2xl px-10 py-4 text-base font-black text-white shadow-lg transition hover:opacity-90 hover:-translate-y-0.5" style={{ backgroundColor: ACCENT }}>
+              Open Admin Panel <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link to="/menu" className="flex items-center gap-2 rounded-2xl border border-gray-200 px-10 py-4 text-base font-bold text-gray-700 transition hover:bg-gray-50">
+              <Globe className="h-4 w-4" /> View Menu Demo
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* ── Footer ───────────────────────────────────────────────── */}
-      <footer className="border-t border-gray-100 py-10 px-6">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-5 md:flex-row">
-          <div className="flex items-center gap-2">
+      {/* ── Footer ── */}
+      <footer className="border-t border-gray-100 py-10">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
+          <div className="flex items-center gap-2.5">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ backgroundColor: ACCENT }}>
               <UtensilsCrossed className="h-3.5 w-3.5 text-white" />
             </div>
             <span className="text-sm font-black text-gray-900">Savor</span>
-            <span className="ml-1 text-sm text-gray-400">— Restaurant Management</span>
+            <span className="text-sm text-gray-400">— Restaurant Management</span>
           </div>
-          <div className="flex flex-wrap justify-center gap-6">
+          <div className="flex items-center gap-6">
             {[
-              { label: 'Digital Menu', to: '/t/1' },
-              { label: 'POS',          to: '/pos' },
-              { label: 'Kitchen',      to: '/kitchen' },
-              { label: 'Board',        to: '/board' },
-              { label: 'Admin',        to: '/admin' },
+              { label: 'Menu', to: '/menu' },
+              { label: 'POS', to: '/pos' },
+              { label: 'Kitchen', to: '/kitchen' },
+              { label: 'Board', to: '/board' },
+              { label: 'Admin', to: '/admin' },
             ].map(l => (
-              <Link key={l.label} to={l.to as any} className="text-sm text-gray-400 transition hover:text-gray-800">
-                {l.label}
-              </Link>
+              <Link key={l.label} to={l.to} className="text-sm text-gray-400 hover:text-gray-700 transition-colors">{l.label}</Link>
             ))}
           </div>
         </div>
