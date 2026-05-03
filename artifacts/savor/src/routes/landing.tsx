@@ -77,24 +77,112 @@ const MODULES = [
   },
 ];
 
-/* ─── Phone mockup — live iframe at 390px mobile width ───────────── */
-function PhoneMockup({ src }: { src: string }) {
-  const MOBILE_W = 390;
-  const MOBILE_H = 820;
-  const DISPLAY_W = 252; // inner display width (border excluded)
-  const scale = DISPLAY_W / MOBILE_W;
-  const displayH = Math.round(MOBILE_H * scale);
+/* ─── Static mock menu screen (no iframe, instant load) ─────────── */
+const MOCK_ITEMS = [
+  { name: 'Grilled Octopus',      desc: 'Smoked paprika, crispy potatoes & chimichurri', price: '18.00', emoji: '🐙', badge: 'Popular' },
+  { name: 'Crispy Calamari',      desc: 'Lightly battered, served with marinara & lemon', price: '14.00', emoji: '🦑', badge: null },
+  { name: 'Truffle Mac Bites',    desc: 'Creamy macaroni, white truffle oil drizzle',    price: '12.00', emoji: '🧀', badge: null },
+  { name: 'Pan-Seared Salmon',    desc: 'Seasonal vegetables, lemon butter sauce',       price: '28.00', emoji: '🐟', badge: 'Chef Pick' },
+  { name: 'Molten Lava Cake',     desc: 'Warm chocolate cake, vanilla ice cream',        price: '9.00',  emoji: '🍫', badge: null },
+];
+
+function MockMenuScreen() {
+  const s: Record<string, React.CSSProperties> = {
+    root:    { width: '100%', background: '#fff', fontFamily: 'system-ui,-apple-system,sans-serif', overflowY: 'auto', height: '100%' },
+    header:  { background: ACCENT, padding: '22px 16px 16px', textAlign: 'center' },
+    logo:    { color: '#fff', fontWeight: 800, fontSize: 17, letterSpacing: '-0.3px' },
+    tagline: { color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 2 },
+    searchWrap: { background: '#f6f6f6', padding: '8px 12px 4px' },
+    search:  { background: '#fff', border: '1px solid #eaeaea', borderRadius: 10, padding: '6px 11px', fontSize: 10, color: '#bbb', display: 'flex', gap: 5, alignItems: 'center' },
+    pills:   { display: 'flex', gap: 5, padding: '8px 12px 6px', overflowX: 'auto' as const },
+    pill:    (active: boolean): React.CSSProperties => ({ background: active ? ACCENT : '#f0f0f0', color: active ? '#fff' : '#666', border: 'none', borderRadius: 20, padding: '4px 11px', fontSize: 9, fontWeight: 700, cursor: 'default', whiteSpace: 'nowrap' }),
+    sectionLabel: { padding: '6px 12px 3px', fontSize: 10, fontWeight: 800, color: '#333' },
+    card:    { margin: '4px 10px', background: '#fff', borderRadius: 13, padding: '9px 10px', border: '1px solid #f0f0f0', display: 'flex', gap: 9, alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+    img:     { width: 44, height: 44, background: '#f5f5f5', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 },
+    name:    { fontWeight: 700, fontSize: 11, color: '#1a1a1a', lineHeight: 1.2 },
+    desc:    { fontSize: 9, color: '#aaa', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, maxWidth: 110 },
+    price:   { fontWeight: 800, fontSize: 13, color: ACCENT, marginTop: 3 },
+    addBtn:  { background: ACCENT, color: '#fff', border: 'none', borderRadius: 8, width: 27, height: 27, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0, cursor: 'default', lineHeight: 1 },
+    badge:   { display: 'inline-block', background: '#fef3c7', color: '#92400e', fontSize: 8, fontWeight: 700, borderRadius: 5, padding: '1px 5px', marginLeft: 5 },
+    cartBar: { margin: '10px 10px 16px', background: ACCENT, borderRadius: 13, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+    cartTxt: { color: '#fff', fontSize: 11, fontWeight: 700 },
+    cartBtn: { color: '#fff', fontSize: 9, fontWeight: 800, background: 'rgba(255,255,255,0.18)', padding: '4px 9px', borderRadius: 7 },
+    callBtn: { margin: '0 10px 10px', border: `1px solid ${ACCENT}`, borderRadius: 10, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 10, fontWeight: 700, color: ACCENT },
+  };
 
   return (
+    <div style={s.root}>
+      <div style={s.header}>
+        <div style={{ fontSize: 22 }}>🍽️</div>
+        <div style={s.logo}>Savor1</div>
+        <div style={s.tagline}>Modern Dining, Redefined</div>
+      </div>
+
+      <div style={s.searchWrap}>
+        <div style={s.search}><span>🔍</span> Search menu...</div>
+      </div>
+
+      <div style={s.pills}>
+        {['All', 'Starters', 'Mains', 'Desserts', 'Drinks'].map((c, i) => (
+          <button key={c} style={s.pill(i === 1)}>{c}</button>
+        ))}
+      </div>
+
+      <div style={s.sectionLabel}>🟢 Starters</div>
+
+      {MOCK_ITEMS.slice(0, 3).map(item => (
+        <div key={item.name} style={s.card}>
+          <div style={s.img}>{item.emoji}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={s.name}>
+              {item.name}
+              {item.badge && <span style={s.badge}>{item.badge}</span>}
+            </div>
+            <div style={s.desc}>{item.desc}</div>
+            <div style={s.price}>{item.price}</div>
+          </div>
+          <div style={s.addBtn}>+</div>
+        </div>
+      ))}
+
+      <div style={s.sectionLabel}>🔵 Mains</div>
+      {MOCK_ITEMS.slice(3, 5).map(item => (
+        <div key={item.name} style={s.card}>
+          <div style={s.img}>{item.emoji}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={s.name}>
+              {item.name}
+              {item.badge && <span style={s.badge}>{item.badge}</span>}
+            </div>
+            <div style={s.desc}>{item.desc}</div>
+            <div style={s.price}>{item.price}</div>
+          </div>
+          <div style={s.addBtn}>+</div>
+        </div>
+      ))}
+
+      <div style={{ height: 8 }} />
+      <div style={s.callBtn}>🔔 Call Waiter</div>
+      <div style={s.cartBar}>
+        <span style={s.cartTxt}>2 items · 32.00</span>
+        <span style={s.cartBtn}>View Cart →</span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Phone frame wrapper ────────────────────────────────────────── */
+function PhoneMockup() {
+  return (
     <div
-      className="relative mx-auto"
+      className="relative mx-auto overflow-hidden"
       style={{
-        width: DISPLAY_W + 20,
+        width: 272,
         border: '10px solid #1c1c1e',
         borderRadius: '2.8rem',
-        overflow: 'hidden',
         background: '#000',
         boxShadow: '0 0 0 2px #3a3a3c, 0 40px 80px rgba(0,0,0,0.55)',
+        height: 540,
       }}
     >
       {/* notch */}
@@ -102,20 +190,8 @@ function PhoneMockup({ src }: { src: string }) {
         className="absolute left-1/2 top-0 z-10 -translate-x-1/2 rounded-b-2xl bg-[#1c1c1e]"
         style={{ height: 14, width: 88 }}
       />
-      <div style={{ height: displayH, overflow: 'hidden', position: 'relative' }}>
-        <iframe
-          src={src}
-          title="Digital Menu"
-          style={{
-            width: MOBILE_W,
-            height: MOBILE_H,
-            transform: `scale(${scale})`,
-            transformOrigin: 'top left',
-            border: 'none',
-            pointerEvents: 'none',
-          }}
-          loading="lazy"
-        />
+      <div style={{ paddingTop: 14, height: '100%', overflowY: 'auto', overflowX: 'hidden' }}>
+        <MockMenuScreen />
       </div>
     </div>
   );
@@ -219,7 +295,7 @@ function ModuleShowcase() {
       >
         {mod.mobile ? (
           <div className="flex justify-center py-6">
-            <PhoneMockup src={mod.url} />
+            <PhoneMockup />
           </div>
         ) : (
           <BrowserMockup url={mod.url}>
@@ -357,7 +433,7 @@ function LandingPage() {
           {/* right — phone mockup (customer-facing product first) */}
           <div className="flex justify-center lg:justify-end">
             <div className="phone-float">
-              <PhoneMockup src="/t/1" />
+              <PhoneMockup />
               {/* floating label */}
               <div className="mx-auto mt-4 flex w-fit items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 backdrop-blur-sm">
                 <Globe className="h-3.5 w-3.5" style={{ color: ACCENT }} />
