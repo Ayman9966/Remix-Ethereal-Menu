@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PosRouteImport } from './routes/pos'
 import { Route as MenuRouteImport } from './routes/menu'
+import { Route as LandingRouteImport } from './routes/landing'
 import { Route as KitchenRouteImport } from './routes/kitchen'
 import { Route as BoardRouteImport } from './routes/board'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -25,6 +26,11 @@ const PosRoute = PosRouteImport.update({
 const MenuRoute = MenuRouteImport.update({
   id: '/menu',
   path: '/menu',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LandingRoute = LandingRouteImport.update({
+  id: '/landing',
+  path: '/landing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KitchenRoute = KitchenRouteImport.update({
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/board': typeof BoardRoute
   '/kitchen': typeof KitchenRoute
+  '/landing': typeof LandingRoute
   '/menu': typeof MenuRoute
   '/pos': typeof PosRoute
   '/t/$tableNumber': typeof TTableNumberRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/board': typeof BoardRoute
   '/kitchen': typeof KitchenRoute
+  '/landing': typeof LandingRoute
   '/menu': typeof MenuRoute
   '/pos': typeof PosRoute
   '/t/$tableNumber': typeof TTableNumberRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/board': typeof BoardRoute
   '/kitchen': typeof KitchenRoute
+  '/landing': typeof LandingRoute
   '/menu': typeof MenuRoute
   '/pos': typeof PosRoute
   '/t/$tableNumber': typeof TTableNumberRoute
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/board'
     | '/kitchen'
+    | '/landing'
     | '/menu'
     | '/pos'
     | '/t/$tableNumber'
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/board'
     | '/kitchen'
+    | '/landing'
     | '/menu'
     | '/pos'
     | '/t/$tableNumber'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/board'
     | '/kitchen'
+    | '/landing'
     | '/menu'
     | '/pos'
     | '/t/$tableNumber'
@@ -116,6 +128,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   BoardRoute: typeof BoardRoute
   KitchenRoute: typeof KitchenRoute
+  LandingRoute: typeof LandingRoute
   MenuRoute: typeof MenuRoute
   PosRoute: typeof PosRoute
   TTableNumberRoute: typeof TTableNumberRoute
@@ -135,6 +148,13 @@ declare module '@tanstack/react-router' {
       path: '/menu'
       fullPath: '/menu'
       preLoaderRoute: typeof MenuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/landing': {
+      id: '/landing'
+      path: '/landing'
+      fullPath: '/landing'
+      preLoaderRoute: typeof LandingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kitchen': {
@@ -180,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   BoardRoute: BoardRoute,
   KitchenRoute: KitchenRoute,
+  LandingRoute: LandingRoute,
   MenuRoute: MenuRoute,
   PosRoute: PosRoute,
   TTableNumberRoute: TTableNumberRoute,
