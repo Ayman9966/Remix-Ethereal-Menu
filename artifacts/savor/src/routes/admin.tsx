@@ -191,7 +191,37 @@ function AnalyticsTab() {
       { name: 'Takeaway', value: takeawayCount }
     ];
 
-    return { totalRevenue, totalOrders, avgOrderValue, topItemsData, revenueData, typeData };
+    // Peak hours — orders by hour of day
+    const hourMap = new Map<number, number>();
+    for (let h = 0; h < 24; h++) hourMap.set(h, 0);
+    orders.forEach(o => {
+      const h = new Date(o.createdAt).getHours();
+      hourMap.set(h, (hourMap.get(h) || 0) + 1);
+    });
+    const formatHour = (h: number) => {
+      if (h === 0) return '12am';
+      if (h === 12) return '12pm';
+      return h < 12 ? `${h}am` : `${h - 12}pm`;
+    };
+    const peakHoursData = Array.from(hourMap.entries()).map(([h, count]) => ({
+      hour: formatHour(h),
+      hourRaw: h,
+      count,
+    }));
+    const peakHour = peakHoursData.reduce((best, d) => (d.count > best.count ? d : best), peakHoursData[0]);
+
+    // Busy days — orders by day of week
+    const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayMap = new Map<number, number>();
+    for (let d = 0; d < 7; d++) dayMap.set(d, 0);
+    orders.forEach(o => {
+      const d = new Date(o.createdAt).getDay();
+      dayMap.set(d, (dayMap.get(d) || 0) + 1);
+    });
+    const busyDaysData = Array.from(dayMap.entries()).map(([d, count]) => ({ day: DAY_NAMES[d], count }));
+    const busiestDay = busyDaysData.reduce((best, d) => (d.count > best.count ? d : best), busyDaysData[0]);
+
+    return { totalRevenue, totalOrders, avgOrderValue, topItemsData, revenueData, typeData, peakHoursData, peakHour, busyDaysData, busiestDay };
   }, [orders]);
 
   const COLORS = ['#426564', '#7BA09F', '#A3C1C0', '#D1E0DF', '#EDF2F2'];
@@ -287,6 +317,82 @@ function AnalyticsTab() {
                   />
                   <Legend verticalAlign="bottom" height={36}/>
                 </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Busy Days of Week */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="mb-6 flex items-start justify-between gap-2">
+              <h4 className="font-display text-base font-bold">Busiest Days</h4>
+              {stats.busiestDay.count > 0 && (
+                <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+                  Peak: {stats.busiestDay.day}
+                </span>
+              )}
+            </div>
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.busyDaysData} barCategoryGap="28%">
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted)/0.2)" />
+                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <RechartsTooltip
+                    formatter={(val: number) => [val, 'Orders']}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                    {stats.busyDaysData.map((entry, i) => (
+                      <Cell
+                        key={i}
+                        fill={entry.day === stats.busiestDay.day && stats.busiestDay.count > 0 ? '#426564' : 'hsl(var(--muted)/0.35)'}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Peak Hours */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="mb-6 flex items-start justify-between gap-2">
+              <h4 className="font-display text-base font-bold">Peak Hours</h4>
+              {stats.peakHour.count > 0 && (
+                <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+                  Peak: {stats.peakHour.hour}
+                </span>
+              )}
+            </div>
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.peakHoursData} barCategoryGap="10%">
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted)/0.2)" />
+                  <XAxis
+                    dataKey="hour"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10 }}
+                    interval={2}
+                  />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <RechartsTooltip
+                    formatter={(val: number) => [val, 'Orders']}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                    {stats.peakHoursData.map((entry, i) => (
+                      <Cell
+                        key={i}
+                        fill={entry.hourRaw === stats.peakHour.hourRaw && stats.peakHour.count > 0 ? '#426564' : 'hsl(var(--muted)/0.35)'}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
