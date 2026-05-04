@@ -116,7 +116,6 @@ CREATE TABLE IF NOT EXISTS public.brand_settings (
   board_show_price BOOLEAN NOT NULL DEFAULT true,
   board_show_description BOOLEAN NOT NULL DEFAULT true,
   board_show_prep_time BOOLEAN NOT NULL DEFAULT true,
-  board_template INT NOT NULL DEFAULT 1,
   tax_enabled BOOLEAN NOT NULL DEFAULT false,
   tax_rate NUMERIC(5, 2) NOT NULL DEFAULT 0,
   tax_type TEXT NOT NULL DEFAULT 'percentage', -- 'percentage' or 'fixed'
@@ -150,7 +149,6 @@ ALTER TABLE public.brand_settings
   ADD COLUMN IF NOT EXISTS board_show_price BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS board_show_description BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS board_show_prep_time BOOLEAN NOT NULL DEFAULT true,
-  ADD COLUMN IF NOT EXISTS board_template INT NOT NULL DEFAULT 1,
   ADD COLUMN IF NOT EXISTS tax_enabled BOOLEAN NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS tax_rate NUMERIC(5, 2) NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS tax_type TEXT NOT NULL DEFAULT 'percentage',
@@ -435,13 +433,13 @@ INSERT INTO public.brand_settings (
   restaurant_name, tagline, accent_color,
   online_ordering_enabled, show_prep_time, menu_scale,
   currency, total_tables, ordering_mode,
-  board_background_color, board_cycle_seconds, board_columns, board_show_photos, board_show_price, board_show_description, board_show_prep_time, board_template,
+  board_background_color, board_cycle_seconds, board_columns, board_show_photos, board_show_price, board_show_description, board_show_prep_time,
   auto_print_invoice, invoice_size
 ) SELECT
   'Savor', 'Modern Dining, Redefined', '#426564',
   true, true, 90,
   '$', 20, 'both',
-  '#0a0d13', 15, 3, true, true, true, true, 1,
+  '#0a0d13', 15, 3, true, true, true, true,
   false, '80mm'
 WHERE NOT EXISTS (SELECT 1 FROM public.brand_settings);
 
