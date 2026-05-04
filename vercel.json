@@ -1,0 +1,1 @@
+{\n  "buildCommand": "pnpm install --frozen-lockfile && pnpm run build",\n  "installCommand": "pnpm install --frozen-lockfile",\n  "outputDirectory": "artifacts/savor/dist/public",\n  "env": {\n    "PORT": {\n      "value": "3000"\n    },\n    "BASE_PATH": {\n      "value": "/"\n    }\n  },\n  "regions": ["iad1"]\n}
